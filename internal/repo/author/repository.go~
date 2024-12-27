@@ -1,0 +1,20 @@
+package authorrepo
+
+import (
+	"book/internal/adapters/storage"
+	"book/internal/book/entities"
+	"book/internal/logger"
+)
+
+type AuthorRepository interface {
+	Author(name string) *entities.Author
+}
+
+type authorRepository struct {
+	db     storage.DB
+	logger logger.Logger
+}
+
+func NewAuthorRepository(logger logger.Logger, db storage.DB) AuthorRepository {
+	return &authorRepository{logger: logger, db: db}
+}

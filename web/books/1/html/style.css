@@ -1,0 +1,87 @@
+/* Общий стиль для страницы */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    text-align: center;
+}
+
+/* Название книги */
+h1 {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #222;
+}
+
+/* Название главы */
+h2 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    color: #555;
+}
+
+/* Рамка для текста книги */
+div {
+     max-width: 1000px; /* Увеличена ширина */
+    padding: 30px; /* Увеличены внутренние отступы */
+    background-color: #fff;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: justify;
+    margin-top: 20px;
+}
+
+/* Абзацы с красной строкой */
+p {
+    line-height: 1.6;
+    margin: 0 0 1em 0;
+    padding: 0;
+    text-align: justify;
+    text-indent: 2em; /* Красная строка */
+}
+
+a {
+    color: inherit; /* Цвет ссылки такой же, как у текста */
+    text-decoration: none; /* Убираем подчеркивание */
+    pointer-events: none; /* Ссылка не кликабельна */
+    cursor: default; /* Меняем курсор на стандартный */
+}
+
+blockquote {
+    margin: 20px auto;
+    padding: 15px 20px;
+    font-style: italic;
+    background-color: #f9f9f9;
+    border-left: 5px solid #ccc;
+    color: #555;
+    max-width: 900px;
+    text-align: justify;
+    border-radius: 5px; /* Углы чуть скруглены */
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Для маленьких экранов */
+@media (max-width: 600px) {
+    h1 {
+        font-size: 2rem;
+    }
+
+    h2 {
+        font-size: 1.5rem;
+    }
+
+    div {
+        padding: 15px;
+        font-size: 0.9rem;
+    }
+}

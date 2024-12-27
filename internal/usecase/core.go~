@@ -1,0 +1,7 @@
+package usecase
+
+import bookcore "book/internal/book/core/book"
+
+type UseCase interface {
+	bookcore.BookUseCase
+}

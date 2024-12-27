@@ -1,0 +1,42 @@
+package templates
+
+templ head(title string) {
+	<head>
+		<title>{ title }</title>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<link rel="stylesheet" href="/static/css/style.css"/>
+	</head>
+}
+
+templ header() {
+	<header class="header">
+		<div class="container">
+			<h1 class="logo"><a href="/books/">Library</a></h1>
+			<nav class="nav">
+				<ul class="nav-list">
+					<li><a href="#">Account</a></li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+}
+
+templ footer() {
+	<footer class="footer">
+		<div class="container">
+			<p>&copy; 2024 Online Library. All rights reserved.</p>
+		</div>
+	</footer>
+}
+
+templ Layout(contents templ.Component, title string) {
+	@head(title)
+	@header()
+	@contents
+	@footer()
+}
+
+//Если пользователь не зарегистрирован, раскомментируйте строки ниже -->
+//<li><a href="#">Register</a></li>
+//<li><a href="#">Login</a></li> -->

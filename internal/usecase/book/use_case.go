@@ -1,0 +1,23 @@
+package bookusecase
+
+import (
+	"book/internal/dtos"
+	"book/internal/logger"
+	"book/internal/repo"
+	"context"
+)
+
+type BookUseCase interface {
+	Book(ctx context.Context, uuid string) (*dtos.BookResponse, error)
+	Books(ctx context.Context, payload dtos.BooksRequest) (*dtos.BooksResponse, error)
+	BookFile(ctx context.Context, payload dtos.BookFileRequest) (*dtos.BookFileResponse, error)
+}
+
+type bookUseCase struct {
+	repo   repo.Repository
+	logger logger.Logger
+}
+
+func NewBookUseCase(logger logger.Logger, repo repo.Repository) BookUseCase {
+	return &bookUseCase{logger: logger, repo: repo}
+}

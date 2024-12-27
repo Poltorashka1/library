@@ -1,0 +1,84 @@
+package main
+
+import (
+	"book/internal/entities"
+	"database/sql"
+	"fmt"
+	"github.com/google/uuid"
+	_ "github.com/mattn/go-sqlite3"
+	"log"
+	"math/rand"
+)
+
+const cfgFileName = ".env"
+
+//func main() {
+//	a := app.New()
+//	a.Start(cfgFileName)
+//}
+
+func main() {
+	// Подключение к PostgreSQL
+	db, err := sql.Open("sqlite3", "book.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Генерация 40 книг
+	books := generateBooks(40)
+
+	// Добавление записей в таблицу
+	for _, book := range books {
+		_, err := db.Exec(`
+			INSERT INTO books_info (isbn, title, publication_year, description, books_file_uuid)
+			VALUES ($1, $2, $3, $4, $5)
+		`, book.ISBN, book.Title, book.PublicationYear, book.Description, book.BooksFileUUID)
+		if err != nil {
+			log.Fatalf("Error inserting book: %v", err)
+		}
+	}
+
+	fmt.Println("40 books have been successfully added to the database!")
+}
+
+// Генерация книг
+func generateBooks(count int) []entities.Book {
+	titles := []string{
+		"The Adventures of Golang",
+		"Building Scalable Systems",
+		"Mastering Algorithms",
+		"Introduction to Databases",
+		"Cloud Computing Basics",
+		"Programming Paradigms",
+		"Concurrency in Go",
+		"Data Structures Demystified",
+		"Understanding APIs",
+		"Web Development Essentials",
+	}
+
+	descriptions := []string{
+		"A fascinating tale about the power of programming.",
+		"Step-by-step guide to creating robust applications.",
+		"Learn the ins and outs of efficient algorithms.",
+		"Essential reading for database enthusiasts.",
+		"Navigate the world of cloud computing with ease.",
+		"Explore various programming paradigms and patterns.",
+		"Unlock the secrets of concurrency in Go.",
+		"Deep dive into data structures and their uses.",
+		"An overview of designing and consuming APIs.",
+		"Discover the fundamentals of web development.",
+	}
+
+	books := make([]entities.Book, count)
+	for i := 0; i < count; i++ {
+		books[i] = entities.Book{
+			ISBN:            fmt.Sprintf("978-3-%06d-%01d", rand.Intn(999999), rand.Intn(9)),
+			Title:           titles[rand.Intn(len(titles))],
+			PublicationYear: 2000 + rand.Intn(24), // Годы с 2000 по 2023
+			Description:     descriptions[rand.Intn(len(descriptions))],
+			BooksFileUUID:   uuid.New().String(), // Случайное время создания
+		}
+	}
+	return books
+}

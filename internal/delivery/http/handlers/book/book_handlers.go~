@@ -1,0 +1,21 @@
+package bookhandlers
+
+import (
+	usecase "book/internal/book/usecase"
+	"book/internal/logger"
+	"net/http"
+)
+
+type BookHandlers interface {
+	Book(w http.ResponseWriter, r *http.Request)
+}
+
+type bookHandlers struct {
+	logger  logger.Logger
+	useCase usecase.UseCase
+}
+
+func NewBookHandlers(logger logger.Logger, useCase usecase.UseCase) BookHandlers {
+	return &bookHandlers{logger: logger, useCase: useCase}
+}
+ 

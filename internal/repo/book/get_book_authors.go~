@@ -1,0 +1,7 @@
+package bookrepo
+
+import "context"
+
+func GetBookAuthors(ctx context.Context, title string) ([]string, error) {
+
+}
