@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-templ Books(books dtos.BooksResponse, page int) {
+templ Books(books dtos.BooksResponse, page int, limit int) {
 	<main class="main">
 		<!-- Book Grid -->
 		<div class="book-grid">
@@ -27,8 +27,8 @@ templ Books(books dtos.BooksResponse, page int) {
 				</div>
 			}
 			<div class="pagination">
-				<a href={ templ.URL(fmt.Sprintf("/books/?page=%d", page-1)) } class="pagination-link">Previous</a>
-				<a href={ templ.URL(fmt.Sprintf("/books/?page=%d", page+1)) } class="pagination-link">Next</a>
+				<a href={ templ.URL(fmt.Sprintf("/books/?page=%d&limit=%d", page-1, limit)) } class="pagination-link">Previous</a>
+				<a href={ templ.URL(fmt.Sprintf("/books/?page=%d&limit=%d", page+1, limit)) } class="pagination-link">Next</a>
 			</div>
 		</div>
 	</main>

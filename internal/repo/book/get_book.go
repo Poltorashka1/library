@@ -13,7 +13,7 @@ import (
 // Book get book by uuid, err return apperrors.ErrBookNotFound
 func (r *bookRepository) Book(ctx context.Context, uuid string) (*entities.Book, error) {
 	query := storage.Query{
-		QueryName: "Book",
+		QueryName: "get book by uuid",
 		Query: `select t1.uuid, 
        			 t1.isbn, 
        			 t1.title, 

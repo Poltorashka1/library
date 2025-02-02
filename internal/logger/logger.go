@@ -6,12 +6,14 @@ import (
 	"log/slog"
 	"os"
 )
+//go:generate mockery --name=Logger
 
 type Logger interface {
 	Info(info string)
 	Error(err string)
 	ErrorOp(err string, op string)
 	Fatal(err string)
+	Debug(info string)
 }
 
 type slogLogger struct {
@@ -46,4 +48,8 @@ func (s slogLogger) ErrorOp(err string, op string) {
 func (s slogLogger) Fatal(err string) {
 	s.log.Error(err)
 	os.Exit(1)
+}
+
+func (s slogLogger) Debug(info string) {
+	s.log.Debug(info)
 }

@@ -7,6 +7,8 @@ import (
 	"book/internal/usecase/book"
 )
 
+//go:generate mockery --name=UseCase
+
 type UseCase interface {
 	bookusecase.BookUseCase
 	authorusecase.AuthorUseCase

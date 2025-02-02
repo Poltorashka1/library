@@ -1,8 +1,0 @@
-package dtos
-
-type CreateBook struct {
-	Name   string `json:"name,omitempty"`
-	Year   int    `json:"year,omitempty"`
-	Author string `json:"author,omitempty"`
-	Count  int    `json:"count,omitempty"`
-}

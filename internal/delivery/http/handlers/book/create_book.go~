@@ -1,7 +1,34 @@
 package bookhandlers
 
-import "net/http"
+import (
+	"book/internal/delivery/http/request"
+	"book/internal/delivery/http/response"
+	"book/internal/dtos"
+	apperrors "book/internal/errors"
+	"fmt"
+	"net/http"
+)
 
 func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
+	req := dtos.CreateBook{}
+	fmt.Println(req)
+
+	err := request.BodyParse(r, &req)
+	if err != nil {
+		h.logger.Error(err)
+		response.Error(w, apperrors.ErrServerError, http.StatusBadRequest)
+		return
+	}
+	fmt.Println(req)
+	//fmt.Println(r.Header)
+	//buf, _ := io.ReadAll(r.Body)
+	//fmt.Println(string(buf))
+	//
+	//r.ParseForm()
+	//title := r.FormValue("title")
+	//fmt.Println(title)
+	//req := dtos.CreteBookRequest{}
+	//
+	//request.BodyParse(r.Body, &req)
 
 }

@@ -18,8 +18,8 @@ templ Books(books dtos.BooksResponse, page int) {
 						<div class="authors">
 							<strong>Authors:</strong>
 							for _, a := range b.Authors.Authors {
-								<a href={ templ.URL("/author/" + a.UUID) } class="author">{ a.NickName }</a><br>
-
+								<a href={ templ.URL("/author/" + a.UUID) } class="author">{ a.NickName }</a>
+								<br/>
 							}
 						</div>
 						<a href={ templ.URL("/book/" + b.UUID) } class="book-link">View Details</a>

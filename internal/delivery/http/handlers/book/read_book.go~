@@ -1,6 +1,7 @@
 package bookhandlers
 
 import (
+	"book/internal/delivery/http/request"
 	"book/internal/delivery/http/response"
 	"book/internal/dtos"
 	apperrors "book/internal/errors"
@@ -27,6 +28,12 @@ func (h *bookHandlers) ReadBook(w http.ResponseWriter, r *http.Request) {
 	//	bookChapter = "1"
 	//}
 
+	bookUUID := request.URLParse(r, "uuid")
+	bookChapter := request.URLParse(r, "chapter")
+	if bookChapter == "" {
+		bookChapter = "1"
+	}
+
 	var payload = dtos.BookFileRequest{
 		FileName: bookUUID,
 		FileType: h.cfg.FormatHTML(),
@@ -45,7 +52,7 @@ func (h *bookHandlers) ReadBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.Success(w, result, h.cfg.HTML())
+	response.Success(w, result.File, h.cfg.HTML())
 }
 
 //func getChapter(fileName string) (string, []byte, error) {

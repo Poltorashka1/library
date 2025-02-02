@@ -86,5 +86,5 @@ func NewDB(ctx context.Context, logger logger.Logger, config config.DBConfig) DB
 }
 
 func (db *db) logQuery(query Query) {
-	db.logger.Info(query.StringV1())
+	db.logger.Debug(query.StringV1())
 }

@@ -7,6 +7,8 @@ import (
 	"book/internal/usecase/book"
 )
 
+//go:generate mockery
+
 type UseCase interface {
 	bookusecase.BookUseCase
 	authorusecase.AuthorUseCase
@@ -19,7 +21,7 @@ type useCase struct {
 
 func NewUseCase(logger logger.Logger, repo repo.Repository) UseCase {
 	return &useCase{
-		bookusecase.NewBookUseCase(logger, repo, repo),
+		bookusecase.NewBookUseCase(logger, repo),
 		authorusecase.NewAuthorUseCase(logger, repo),
 	}
 }

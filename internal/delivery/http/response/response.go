@@ -1,8 +1,14 @@
 package response
 
 import (
+	"book/internal/errors"
 	"encoding/json"
 	"net/http"
+	"reflect"
+)
+
+const (
+	JSON string = "application/json"
 )
 
 type Response interface {
@@ -14,19 +20,23 @@ type Response interface {
 }
 
 type errorResponse struct {
-	ResponseError       string `json:"error"`
-	ResponseStatusCode  int    `json:"status_code"`
+	ErrorDetail errorDetail `json:"error"`
+}
+
+type errorDetail struct {
+	ResponseStatusCode  int    `json:"code"`
+	ResponseMessage     string `json:"message"`
 	responseContentType string
 }
 
 func (r *errorResponse) Content() any {
-	return r.ResponseError
+	return r.ErrorDetail.ResponseMessage
 }
 func (r *errorResponse) StatusCode() int {
-	return r.ResponseStatusCode
+	return r.ErrorDetail.ResponseStatusCode
 }
 func (r *errorResponse) ContentType() string {
-	return r.responseContentType
+	return r.ErrorDetail.responseContentType
 }
 func (r *errorResponse) Headers() http.Header {
 	return nil
@@ -34,61 +44,80 @@ func (r *errorResponse) Headers() http.Header {
 
 // Error sends a JSON response with the error text and status code
 func Error(w http.ResponseWriter, err error, statusCode int) {
-	response := &errorResponse{
-		ResponseError:       err.Error(),
-		ResponseStatusCode:  statusCode,
-		responseContentType: "application/json", // default value
-	}
+	response := &errorResponse{errorDetail{ResponseMessage: err.Error(), ResponseStatusCode: statusCode, responseContentType: JSON}}
 
-	Write(w, response)
+	write(w, response)
 }
 
-type successResponse struct {
-	ResponseContent     any `json:"content"`
-	ResponseStatusCode  int `json:"status_code"`
+// ServerError sends a JSON response with the "server error" and StatusInternalServerError
+func ServerError(w http.ResponseWriter) {
+	// добавить логирование тогда в ней есть смысл
+	// todo тестовая функция возможно стоит ее удалить так как не особо нужна или модифицировать
+	response := &errorResponse{
+		errorDetail{
+			ResponseMessage:     apperrors.ErrServerError.Error(),
+			ResponseStatusCode:  http.StatusInternalServerError,
+			responseContentType: JSON,
+		},
+	}
+
+	write(w, response)
+}
+
+type successDetail struct {
+	ResponseContent     any `json:"content,omitempty"`
+	ResponseStatusCode  int `json:"code"`
 	responseContentType string
 	responseHeaders     http.Header
 }
 
-// todo check how it work now, and headers to http.Header
+type successResponse struct {
+	SuccessDetail successDetail `json:"success"`
+}
+
+// todo c heck how it work now, and headers to http.Header
 
 // Success send response with content on PDF/JSON format (default JSON) and status code
 func Success(w http.ResponseWriter, content any, contentType string, headers ...map[string]string) {
-	var httpHeaders = http.Header{}
+	// todo add проверку на пустую структуру
+	val := reflect.ValueOf(content)
+	if val.Kind() == reflect.Pointer && val.IsNil() {
+		content = nil
+	}
+
+	httpHeaders := http.Header{}
 	if headers != nil {
 		for k, v := range headers[0] {
 			httpHeaders.Set(k, v)
 		}
 	}
+
 	response := &successResponse{
-		ResponseStatusCode:  http.StatusOK,
-		ResponseContent:     content,
-		responseContentType: contentType,
-		responseHeaders:     httpHeaders,
+		successDetail{
+			ResponseContent:     content,
+			ResponseStatusCode:  http.StatusOK,
+			responseContentType: contentType,
+			responseHeaders:     httpHeaders,
+		},
 	}
 
-	Write(w, response)
+	write(w, response)
 }
-
-func (r *successResponse) Headers() http.Header {
-	return r.responseHeaders
-}
-
-//func File(w http.ResponseWriter, content any, contentType string) {
-//
-//}
 
 func (r *successResponse) Content() any {
-	return r.ResponseContent
+	return r.SuccessDetail.ResponseContent
 }
 func (r *successResponse) StatusCode() int {
-	return r.ResponseStatusCode
+	return r.SuccessDetail.ResponseStatusCode
 }
 func (r *successResponse) ContentType() string {
-	return r.responseContentType
+	return r.SuccessDetail.responseContentType
+}
+func (r *successResponse) Headers() http.Header {
+	return r.SuccessDetail.responseHeaders
 }
 
-func Write(w http.ResponseWriter, response Response) {
+func write(w http.ResponseWriter, response Response) {
 	w.Header().Set("Content-Type", response.ContentType())
 	for k, v := range response.Headers() {
 		w.Header().Set(k, v[0])
@@ -103,13 +132,14 @@ func Write(w http.ResponseWriter, response Response) {
 	//}
 
 	switch {
+	// todo !!! unknown content type !!!
 	// todo check if pdf and content not file format
 	case response.ContentType() == "application/pdf":
-		WritePDF(w, response)
+		writePDF(w, response)
 	case response.ContentType() == "application/json":
-		WriteJSON(w, response)
+		writeJSON(w, response)
 	case response.ContentType() == "text/html":
-		WriteHTML(w, response)
+		writeHTML(w, response)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte("Server error"))
@@ -118,7 +148,7 @@ func Write(w http.ResponseWriter, response Response) {
 
 // todo delete this
 
-func WriteHTML(w http.ResponseWriter, response Response) {
+func writeHTML(w http.ResponseWriter, response Response) {
 	_, err := w.Write(response.Content().([]byte))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -126,7 +156,7 @@ func WriteHTML(w http.ResponseWriter, response Response) {
 	}
 }
 
-func WritePDF(w http.ResponseWriter, response Response) {
+func writePDF(w http.ResponseWriter, response Response) {
 	_, err := w.Write(response.Content().([]byte))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -134,7 +164,7 @@ func WritePDF(w http.ResponseWriter, response Response) {
 	}
 }
 
-func WriteJSON(w http.ResponseWriter, response Response) {
+func writeJSON(w http.ResponseWriter, response Response) {
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

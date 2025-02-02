@@ -22,5 +22,4 @@ func (s *Server) Start() {
 	if err != nil {
 		s.logger.Fatal(err.Error())
 	}
-
 }

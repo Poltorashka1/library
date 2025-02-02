@@ -1,31 +1,33 @@
 package bookhandlers
 
 import (
+	"book/internal/delivery/http/request"
 	"book/internal/delivery/http/response"
 	"book/internal/dtos"
 	apperrors "book/internal/errors"
 	"errors"
 	"net/http"
-	"strings"
 )
 
 // todo add validation query params
 
 func (h *bookHandlers) ReadBook(w http.ResponseWriter, r *http.Request) {
 	// todo add other file format
-	parts := strings.Split(r.URL.Path, "/")
-
-	bookUUID := parts[2]
-	var bookChapter string
-	if len(parts) == 3 {
-		bookChapter = "1"
-	} else {
-		bookChapter = parts[2]
-	}
-
-	//if bookChapter == "" {
+	//parts := strings.Split(r.URL.Path, "/")
+	//
+	//bookUUID := parts[2]
+	//var bookChapter string
+	//if len(parts) == 3 {
 	//	bookChapter = "1"
+	//} else {
+	//	bookChapter = parts[2]
 	//}
+
+	bookUUID := request.URLParse(r, "uuid")
+	bookChapter := request.URLParse(r, "chapter")
+	if bookChapter == "" {
+		bookChapter = "1"
+	}
 
 	var payload = dtos.BookFileRequest{
 		FileName: bookUUID,

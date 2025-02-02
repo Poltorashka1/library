@@ -11,7 +11,6 @@ import (
 type Router interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 	MethodFunc(method string, pattern string, handlerFn http.HandlerFunc)
-	URLParam(r *http.Request, key string) string
 }
 
 type router struct {
@@ -26,11 +25,6 @@ func (r *router) MethodFunc(method string, pattern string, handlerFn http.Handle
 	r.mux.MethodFunc(method, pattern, handlerFn)
 }
 
-// todo delete
-func (r *router) URLParam(req *http.Request, key string) string {
-	return chi.URLParam(req, key)
-}
-
 func NewHTTPRouter(handlers handlers.Handlers) Router {
 	r := &router{mux: chi.NewRouter()}
 	r.initRoutes(handlers)
@@ -43,15 +37,18 @@ func NewHTTPRouter(handlers handlers.Handlers) Router {
 	return r
 }
 
+// todo add http method not found
+
 func (r *router) initRoutes(handlers handlers.Handlers) {
 	r.MethodFunc("GET", "/notFound", handlers.NotFound)
 
 	r.MethodFunc("GET", "/book/{uuid}", handlers.Book)
 	r.MethodFunc("GET", "/books/", handlers.Books)
 
-	r.MethodFunc("POST", "/books", handlers.CreateBook)
-	r.MethodFunc("PUT", "/books", handlers.UpdateBook)
-	r.MethodFunc("DELETE", "/books/{title}", handlers.DeleteBook)
+	r.MethodFunc("GET", "/bookCreate", handlers.CreateBook)
+	r.MethodFunc("POST", "/add/", handlers.CreateBook)
+	//r.MethodFunc("PUT", "/books", handlers.UpdateBook)
+	//r.MethodFunc("DELETE", "/books/{title}", handlers.DeleteBook)
 
 	r.MethodFunc("GET", "/read/{bookUUID}", handlers.ReadBook)
 	r.MethodFunc("GET", "/download/{bookUUID}", handlers.DownloadBook)

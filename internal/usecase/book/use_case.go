@@ -9,8 +9,9 @@ import (
 
 type BookUseCase interface {
 	Book(ctx context.Context, uuid string) (*dtos.BookResponse, error)
-	Books(ctx context.Context, payload dtos.BooksRequest) (*dtos.BooksResponse, error)
+	Books(ctx context.Context, payload *dtos.BooksRequest) (*dtos.BooksResponse, error)
 	BookFile(ctx context.Context, payload dtos.BookFileRequest) (*dtos.BookFileResponse, error)
+	CreateBook(ctx context.Context, payload *dtos.CreateBookRequest) (*dtos.CreateBookResponse, error)
 }
 
 type bookUseCase struct {

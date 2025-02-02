@@ -1,15 +1,19 @@
 package config
 
 import (
+	"log"
 	"os"
+	"strconv"
 )
+
+//go:generate mockery --name=HandlersConfig
 
 type HandlersConfig interface {
 	BooksURL() string
 	StaticsURL() string
 	TemplatesURL() string
-	BooksPageNumber() string
-	BooksLimit() string
+	DefaultBooksPageNumber() int
+	DefaultBooksLimit() int
 	NotFoundURL() string
 	// JSON return string with text: 'application/json'
 	JSON() string
@@ -24,6 +28,7 @@ type HandlersConfig interface {
 	FormatPDF() string
 	// FormatHTML return string with text: 'html'
 	FormatHTML() string
+	HTTPBodySize() int64
 }
 
 type handlerConfig struct {
@@ -46,6 +51,9 @@ type handlerConfig struct {
 	formatJSON string
 	formatPDF  string
 	formatHTML string
+
+	//
+	httpBodySize string
 }
 
 func NewHandlerConfig() HandlersConfig {
@@ -62,6 +70,7 @@ func NewHandlerConfig() HandlersConfig {
 		formatJSON:             "json",
 		formatPDF:              "pdf",
 		formatHTML:             "html",
+		httpBodySize:           os.Getenv("MAX_REQUEST_BODY_SIZE"),
 	}
 }
 
@@ -85,12 +94,20 @@ func (cfg *handlerConfig) NotFoundURL() string {
 	return cfg.notFoundURL
 }
 
-func (cfg *handlerConfig) BooksPageNumber() string {
-	return cfg.defaultBooksPageNumber
+func (cfg *handlerConfig) DefaultBooksPageNumber() int {
+	number, err := strconv.Atoi(cfg.defaultBooksPageNumber)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return number
 }
 
-func (cfg *handlerConfig) BooksLimit() string {
-	return cfg.defaultBooksLimit
+func (cfg *handlerConfig) DefaultBooksLimit() int {
+	limit, err := strconv.Atoi(cfg.defaultBooksLimit)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return limit
 }
 
 // JSON return string with text: 'application/json'
@@ -118,4 +135,13 @@ func (cfg *handlerConfig) FormatPDF() string {
 
 func (cfg *handlerConfig) FormatHTML() string {
 	return cfg.formatHTML
+}
+
+func (cfg *handlerConfig) HTTPBodySize() int64 {
+	// todo подумать как делать ли тут ошибку
+	size, err := strconv.Atoi(cfg.httpBodySize)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return int64(size)
 }

@@ -11,7 +11,7 @@ type fileSystemConfig struct {
 }
 
 func NewFileSystemConfig() FileSystemConfig {
-	return &fileSystemConfig{storagePath: os.Getenv("FILE_STORAGE_PATH")}
+	return &fileSystemConfig{storagePath: os.Getenv("BOOKS_FILE_DIR")}
 }
 
 func (fs *fileSystemConfig) StoragePath() string {

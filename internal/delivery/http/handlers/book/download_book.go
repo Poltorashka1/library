@@ -42,7 +42,7 @@ func (h *bookHandlers) DownloadBook(w http.ResponseWriter, r *http.Request) {
 
 	switch payload.FileType {
 	case h.cfg.FormatPDF():
-		response.Success(w, result.File, h.cfg.PDF(), map[string]string{"Content-Disposition": "attachment"})
+		response.Success(w, result.File, h.cfg.PDF(), map[string]string{"Content-Disposition": "attachment"}) // inline to read in browser
 	case h.cfg.FormatJSON():
 		response.Success(w, result.File, h.cfg.JSON(), nil)
 	default:

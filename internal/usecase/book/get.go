@@ -24,7 +24,8 @@ func (u *bookUseCase) Book(ctx context.Context, uuid string) (*dtos.BookResponse
 	}
 
 	return &dtos.BookResponse{
-		ISBN:            result.ISBN,
+		ISBN: result.ISBN,
+		// todo mb uuid delete from response
 		UUID:            result.UUID,
 		Title:           result.Title,
 		PublicationYear: result.PublicationYear,
@@ -53,7 +54,7 @@ func (u *bookUseCase) Book(ctx context.Context, uuid string) (*dtos.BookResponse
 //	Authors:         authorList,
 //}, nil
 
-func (u *bookUseCase) Books(ctx context.Context, payload dtos.BooksRequest) (*dtos.BooksResponse, error) {
+func (u *bookUseCase) Books(ctx context.Context, payload *dtos.BooksRequest) (*dtos.BooksResponse, error) {
 	filter := entities.BookFilter{
 		Start: (payload.Page - 1) * payload.Limit,
 		Stop:  (payload.Page-1)*payload.Limit + payload.Limit,
