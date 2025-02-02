@@ -13,9 +13,39 @@ import (
 	"strings"
 )
 
-type formParser struct {
-	val reflect.Value
-	typ reflect.Type
+type Files map[string][]*os.File
+
+func (f Files) RemoveFiles() {
+	for _, v := range f {
+		if v != nil {
+			for i := range v {
+				err := os.Remove(v[i].Name())
+				if err != nil {
+					log.Printf("request: tempFilesRemove: file remove error: %s", err)
+				}
+			}
+		}
+	}
+}
+
+func (f Files) Add(fileName string, file *os.File) {
+	f[fileName] = append(f[fileName], file)
+}
+
+func (f Files) SetNil(mErr *MultiError, fileName string) {
+	if mErr.err == nil {
+		f[fileName] = nil
+	}
+
+}
+
+type FormParser struct {
+	val  reflect.Value
+	typ  reflect.Type
+	data any
+
+	Values url.Values
+	Files  Files
 }
 
 func FormParse(r *http.Request, data any) error {
@@ -31,81 +61,35 @@ func FormParse(r *http.Request, data any) error {
 		return err
 	}
 
-	files, err := HTTPBodyParse(&r)
+	parser := &FormParser{
+		val:    val,
+		typ:    val.Type(),
+		data:   data,
+		Values: make(url.Values),
+		Files:  make(Files),
+	}
+	defer parser.Files.RemoveFiles()
+
+	err = parser.HTTPBodyParse(&r)
 	if err != nil {
 		return err
 	}
 
-	err = setFormDataValue(r, val, files)
+	err = parser.setDataValue()
 	if err != nil {
-		tempFilesRemove(files)
 		return err
 	}
 
 	return nil
 }
 
-//if fieldType.Type == reflect.TypeOf((*os.File)(nil)) {
-//	//defer func() {
-//	//	if mErr.err == nil {
-//	//		(*files)[fieldName] = nil
-//	//	}
-//	//}()
-//	defer clearFiles(fieldTagName, mErr, files)
-//
-//	file := (*files)[fieldTagName]
-//
-//	if len(file) != 1 {
-//		mErr.err = append(mErr.err, fmt.Errorf("the required field '%s' must be a single file; ", fieldTagName))
-//		continue
-//	}
-//	fieldValue.Set(reflect.ValueOf(file[0]))
-//
-//	continue
-//}
-//if fieldType.Type == reflect.TypeOf(([]*os.File)(nil)) {
-//	//defer func() {
-//	//	if mErr.err == nil {
-//	//		(*files)[fieldName] = nil
-//	//	}
-//	//}()
-//	defer clearFiles(fieldTagName, mErr, files)
-//
-//	file := (*files)[fieldTagName]
-//
-//	if len(file) < 1 {
-//		// todo or нету файла вообще
-//		mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
-//		continue
-//	}
-//	fieldValue.Set(reflect.ValueOf(file))
-//
-//	continue
-//}
-
-//ok := r.Form.Has(fieldTagName)
-//if !ok {
-//	mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
-//	continue
-//}
-//formValue := r.Form.Get(fieldTagName)
-//
-//err = setFieldData(fieldValue, formValue, fieldType.Name)
-//if err != nil {
-//	mErr.err = append(mErr.err, err)
-//	continue
-//}
-
-func setFormDataValue(r *http.Request, val reflect.Value, files *map[string][]*os.File) error {
-
-	typ := val.Type()
+func (p *FormParser) setDataValue() error {
 	var mErr = &MultiError{}
-	for fieldNum := range typ.NumField() {
+	for fieldNum := range p.typ.NumField() {
 
-		fieldType := typ.Field(fieldNum)
-		fieldValue := val.Field(fieldNum)
+		fieldType := p.typ.Field(fieldNum)
+		fieldValue := p.val.Field(fieldNum)
 
-		//fieldTag := fieldType.Tag.Get("form")
 		fieldTagName, _, err := getFieldTags(&fieldType, FORM)
 		if err != nil {
 			return err
@@ -113,38 +97,32 @@ func setFormDataValue(r *http.Request, val reflect.Value, files *map[string][]*o
 
 		switch fieldType.Type {
 		case reflect.TypeOf((*os.File)(nil)):
-			defer clear(fieldTagName, mErr, files)
+			defer p.Files.SetNil(mErr, fieldTagName)
 
-			file := (*files)[fieldTagName]
+			file := p.Files[fieldTagName]
 
 			if len(file) != 1 {
-				// delete file
 				mErr.err = append(mErr.err, fmt.Errorf("the required field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
-			// do not delete file
 			fieldValue.Set(reflect.ValueOf(file[0]))
 		case reflect.TypeOf(([]*os.File)(nil)):
-			defer clear(fieldTagName, mErr, files)
+			defer p.Files.SetNil(mErr, fieldTagName)
 
-			file := (*files)[fieldTagName]
-
-			if len(file) < 1 {
-				// todo or нету файла вообще
-				// delete file
+			files := p.Files[fieldTagName]
+			if len(files) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
 				continue
 			}
-			// do not delete file
-			fieldValue.Set(reflect.ValueOf(file))
+			fieldValue.Set(reflect.ValueOf(files))
 		default:
-			ok := r.Form.Has(fieldTagName)
+			ok := p.Values.Has(fieldTagName)
 			if !ok {
 				mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
 				continue
 			}
 
-			err = setFieldData(fieldValue, r.Form.Get(fieldTagName), fieldType.Name)
+			err = setFieldData(fieldValue, p.Values.Get(fieldTagName), fieldType.Name)
 			if err != nil {
 				mErr.err = append(mErr.err, err)
 				continue
@@ -158,72 +136,51 @@ func setFormDataValue(r *http.Request, val reflect.Value, files *map[string][]*o
 	return nil
 }
 
-func clear(fieldTagName string, mErr *MultiError, files *map[string][]*os.File) {
-	if mErr.err == nil {
-		(*files)[fieldTagName] = nil
-	}
-}
-
-func HTTPBodyParse(r **http.Request) (*map[string][]*os.File, error) {
+func (p *FormParser) HTTPBodyParse(r **http.Request) error {
 	reader, err := (*r).MultipartReader()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	(*r).Form = make(url.Values)
-	var files = make(map[string][]*os.File)
 	for {
 		part, err := reader.NextPart()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+			return err
 		}
 
 		if part.FileName() == "" {
-			key, value, err := parsePart(part)
+			key, value, err := p.parsePart(part)
 			if err != nil {
-				return nil, err
+				return err
 			}
-			(*r).Form.Add(key, value)
+			p.Values.Add(key, value)
 		} else {
-			file, fileField, err := parseFile(part)
+			fileName, file, err := p.parseFile(part)
 			if err != nil {
-				tempFilesRemove(&files)
-				return nil, err
+				//todo use clear func или вообще не стоит использовать тут
+				return err
 			}
-			files[fileField] = append(files[fileField], file)
-		}
-	}
-	return &files, nil
-}
+			p.Files.Add(fileName, file)
 
-func tempFilesRemove(files *map[string][]*os.File) {
-	//todo optimize and if files пришел пустой.
-	for _, v := range *files {
-		if v != nil {
-			for i := range v {
-				err := os.Remove(v[i].Name())
-				if err != nil {
-					log.Printf("request: file remove error: %s", err)
-				}
-			}
 		}
 	}
+	return nil
 }
 
 // todo if content-type != file type
-func parseFile(part *multipart.Part) (file *os.File, fileName string, err error) {
+func (p *FormParser) parseFile(part *multipart.Part) (fileName string, file *os.File, err error) {
 	contentType := part.Header.Get("Content-Type")
 	if contentType != EPUB && contentType != PDF {
-		return nil, "", ErrInvalidContentType
+		return "", nil, ErrInvalidContentType
 	}
 	if !strings.Contains(part.FormName(), "file") {
-		return nil, "", ErrInvalidFieldType
+		return "", nil, ErrInvalidFieldType
 	}
 	if len(part.FileName()) > 100 {
-		return nil, "", ErrFileNameTooLong
+		return "", nil, ErrFileNameTooLong
 	}
 
 	tempFile, err := os.CreateTemp("", "upload-*_"+part.FileName())
@@ -238,7 +195,7 @@ func parseFile(part *multipart.Part) (file *os.File, fileName string, err error)
 	defer tempFile.Close()
 
 	if err != nil {
-		return nil, "", err
+		return "", nil, err
 	}
 
 	buf := make([]byte, 4096)
@@ -246,7 +203,7 @@ func parseFile(part *multipart.Part) (file *os.File, fileName string, err error)
 		n, readErr := part.Read(buf)
 		if n > 0 {
 			if _, writeErr := tempFile.Write(buf[:n]); writeErr != nil {
-				return nil, "", fmt.Errorf("failed to write to temp file: %w", writeErr)
+				return "", nil, fmt.Errorf("failed to write to temp file: %w", writeErr)
 			}
 		}
 		if readErr != nil {
@@ -255,16 +212,16 @@ func parseFile(part *multipart.Part) (file *os.File, fileName string, err error)
 			}
 			var maxBytesError *http.MaxBytesError
 			if errors.As(readErr, &maxBytesError) {
-				return nil, "", ErrContentToLarge
+				return "", nil, ErrContentToLarge
 			}
-			return nil, "", fmt.Errorf("failed to read part: %w", readErr)
+			return "", nil, fmt.Errorf("failed to read part: %w", readErr)
 		}
 	}
 
-	return tempFile, part.FormName(), nil
+	return part.FormName(), tempFile, nil
 }
 
-func parsePart(part *multipart.Part) (string, string, error) {
+func (p *FormParser) parsePart(part *multipart.Part) (key string, value string, err error) {
 	buf := make([]byte, 512)
 	n, err := part.Read(buf)
 	if err != nil {
@@ -277,12 +234,5 @@ func parsePart(part *multipart.Part) (string, string, error) {
 		}
 		return "", "", err
 	}
-	//if err != nil && err != io.EOF {
-	//	var maxBytesError *http.MaxBytesError
-	//	if errors.As(err, &maxBytesError) {
-	//		return "", "", ErrContentToLarge
-	//	}
-	//	return "", "", err
-	//}
 	return "", "", ErrFieldLength
 }

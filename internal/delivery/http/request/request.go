@@ -40,6 +40,10 @@ const (
 //	return nil
 //}
 
+//type Parser interface {
+//
+//}
+
 // validateData validate data and return reflect.Value of pointer value
 func dataValidate(data any) (reflect.Value, error) {
 	if data == nil {
