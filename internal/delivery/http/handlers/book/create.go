@@ -20,6 +20,7 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// todo add error for ErrUnknownContentType
 	err := request.FormParse(r, payload)
 	if err != nil {
 		if errors.Is(err, request.ErrUnknownContentType) {

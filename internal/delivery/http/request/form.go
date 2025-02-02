@@ -49,12 +49,10 @@ type FormParser struct {
 }
 
 func FormParse(r *http.Request, data any) error {
-	// todo test this part
-	//contentType := r.Header.Get("Content-Type")
-	//fmt.Println(contentType)
-	//if contentType != "application/x-www-form-urlencoded" && contentType != "multipart/form-data" {
-	//	return ErrUnknownContentType
-	//}
+	err := requestValidate(r)
+	if err != nil {
+		return err
+	}
 
 	val, err := dataValidate(data)
 	if err != nil {
@@ -80,6 +78,20 @@ func FormParse(r *http.Request, data any) error {
 		return err
 	}
 
+	return nil
+}
+
+func requestValidate(r *http.Request) error {
+	contentType := strings.Split(r.Header.Get("Content-Type"), ";")
+	if contentType[0] == "" {
+		return ErrUnknownContentType
+	}
+	//if contentType[0] != "application/x-www-form-urlencoded" && contentType[0] != "multipart/form-data" {
+	//	return ErrUnknownContentType
+	//}
+	if contentType[0] != "multipart/form-data" {
+		return ErrUnknownContentType
+	}
 	return nil
 }
 
@@ -137,6 +149,7 @@ func (p *FormParser) setDataValue() error {
 }
 
 func (p *FormParser) HTTPBodyParse(r **http.Request) error {
+	// todo это работает только с form-data
 	reader, err := (*r).MultipartReader()
 	if err != nil {
 		return err
@@ -172,18 +185,16 @@ func (p *FormParser) HTTPBodyParse(r **http.Request) error {
 
 // todo if content-type != file type
 func (p *FormParser) parseFile(part *multipart.Part) (fileName string, file *os.File, err error) {
-	contentType := part.Header.Get("Content-Type")
-	if contentType != EPUB && contentType != PDF {
-		return "", nil, ErrInvalidContentType
-	}
-	if !strings.Contains(part.FormName(), "file") {
-		return "", nil, ErrInvalidFieldType
-	}
-	if len(part.FileName()) > 100 {
-		return "", nil, ErrFileNameTooLong
+	err = validatePart(part)
+	if err != nil {
+		return "", nil, err
 	}
 
 	tempFile, err := os.CreateTemp("", "upload-*_"+part.FileName())
+	if err != nil {
+		return "", nil, err
+	}
+
 	defer func() {
 		if err != nil {
 			err := os.Remove(tempFile.Name())
@@ -194,16 +205,35 @@ func (p *FormParser) parseFile(part *multipart.Part) (fileName string, file *os.
 	}()
 	defer tempFile.Close()
 
+	err = readFile(part, tempFile)
 	if err != nil {
 		return "", nil, err
 	}
 
+	return part.FormName(), tempFile, nil
+}
+
+func validatePart(part *multipart.Part) error {
+	contentType := part.Header.Get("Content-Type")
+	if contentType != EPUB && contentType != PDF {
+		return ErrInvalidContentType
+	}
+	if !strings.Contains(part.FormName(), "file") {
+		return ErrInvalidFieldType
+	}
+	if len(part.FileName()) > 100 {
+		return ErrFileNameTooLong
+	}
+	return nil
+}
+
+func readFile(part *multipart.Part, file *os.File) error {
 	buf := make([]byte, 4096)
 	for {
 		n, readErr := part.Read(buf)
 		if n > 0 {
-			if _, writeErr := tempFile.Write(buf[:n]); writeErr != nil {
-				return "", nil, fmt.Errorf("failed to write to temp file: %w", writeErr)
+			if _, writeErr := file.Write(buf[:n]); writeErr != nil {
+				return fmt.Errorf("failed to write to temp file: %w", writeErr)
 			}
 		}
 		if readErr != nil {
@@ -212,13 +242,12 @@ func (p *FormParser) parseFile(part *multipart.Part) (fileName string, file *os.
 			}
 			var maxBytesError *http.MaxBytesError
 			if errors.As(readErr, &maxBytesError) {
-				return "", nil, ErrContentToLarge
+				return ErrContentToLarge
 			}
-			return "", nil, fmt.Errorf("failed to read part: %w", readErr)
+			return fmt.Errorf("failed to read part: %w", readErr)
 		}
 	}
-
-	return part.FormName(), tempFile, nil
+	return nil
 }
 
 func (p *FormParser) parsePart(part *multipart.Part) (key string, value string, err error) {
