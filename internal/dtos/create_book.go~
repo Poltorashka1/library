@@ -13,7 +13,7 @@ import (
 type CreateBookRequest struct {
 	Title           string     `json:"title" form:"title,required"`
 	ISBN            string     `json:"isbn" form:"isbn"`
-	PublicationYear int        `json:"publication-year,required" form:"publication-year,optional"`
+	PublicationYear int        `json:"publication-year,required" form:"publication-year"`
 	Description     string     `json:"description" form:"description,required"`
 	Publisher       string     `json:"publisher" form:"publisher,required"`
 	File            *os.File   `form:"file"`

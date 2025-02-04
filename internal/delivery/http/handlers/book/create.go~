@@ -19,6 +19,8 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, &apperrors.ErrContentToLarge{MaxSize: h.cfg.HTTPBodySize()}, http.StatusRequestEntityTooLarge)
 		return
 	}
+	fmt.Println(payload.Files)
+	fmt.Println(payload.File)
 	// todo add error for ErrUnknownContentType
 	err := request.FormParse(r, payload)
 	if err != nil {

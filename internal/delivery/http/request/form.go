@@ -55,6 +55,8 @@ type FormParser struct {
 	Files  Files
 }
 
+// todo test new feature - tag required optional and default
+
 // FormParse is a function for parsing request body [*http.Request] in multipart/form-data format to pointer struct.
 // Return error - ErrUnknownContentType, ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge,  MultiError.
 func FormParse(r *http.Request, data any) error {
@@ -107,7 +109,7 @@ func (p *FormParser) setDataValue() error {
 		fieldType := p.typ.Field(fieldNum)
 		fieldValue := p.val.Field(fieldNum)
 
-		fieldTagName, _, err := getFieldTags(&fieldType, FORM)
+		fieldTagName, tag, err := getFieldTags(&fieldType, FORM)
 		if err != nil {
 			return err
 		}
@@ -118,30 +120,46 @@ func (p *FormParser) setDataValue() error {
 
 			file := p.Files[fieldTagName]
 
-			if len(file) != 1 {
-				mErr.err = append(mErr.err, fmt.Errorf("the required field '%s' must be a single file; ", fieldTagName))
+			if tag == "required" && len(file) < 1 {
+				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
-			fieldValue.Set(reflect.ValueOf(file[0]))
+			if tag == "optional" && len(file) > 1 {
+				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
+				continue
+			}
+
+			if file != nil {
+				fieldValue.Set(reflect.ValueOf(file[0]))
+			}
 		case reflect.TypeOf(([]*os.File)(nil)):
 			defer p.Files.SetNil(mErr, fieldTagName)
 
 			files := p.Files[fieldTagName]
-			if len(files) < 1 {
+			if tag == "required" && len(files) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
 				continue
 			}
-			fieldValue.Set(reflect.ValueOf(files))
+			if files != nil {
+				fieldValue.Set(reflect.ValueOf(files))
+			}
 		default:
 			ok := p.Values.Has(fieldTagName)
-			if !ok {
+			if !ok && tag == "required" {
 				mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
+				continue
+			}
+
+			if tag == "optional" && p.Values.Get(fieldTagName) == "" {
 				continue
 			}
 
 			err = setFieldData(fieldValue, p.Values.Get(fieldTagName), fieldType.Name)
 			if err != nil {
-				mErr.err = append(mErr.err, err)
+				if tag == "optional" {
+					mErr.err = append(mErr.err, err)
+					continue
+				}
 				continue
 			}
 		}
@@ -228,7 +246,7 @@ func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file 
 		return "", nil, err
 	}
 
-	return part.FormName(), tempFile, nil
+	return strings.ToLower(part.FormName()), tempFile, nil
 }
 
 // todo add content type in FormParser settings.
@@ -240,7 +258,7 @@ func validateFilePart(part *multipart.Part) error {
 	if contentType != EPUB && contentType != PDF {
 		return ErrInvalidContentType
 	}
-	if !strings.Contains(part.FormName(), "file") {
+	if !strings.Contains(strings.ToLower(part.FormName()), "file") {
 		return ErrInvalidFieldType
 	}
 	if len(part.FileName()) > 100 {
@@ -280,8 +298,8 @@ func (p *FormParser) parseFormValue(part *multipart.Part) (key string, value str
 	buf := make([]byte, 512)
 	n, err := part.Read(buf)
 	if err != nil {
-		if err == io.EOF && n > 0 {
-			return part.FormName(), string(buf[:n]), nil
+		if err == io.EOF && n >= 0 {
+			return strings.ToLower(part.FormName()), string(buf[:n]), nil
 		}
 		var maxBytesError *http.MaxBytesError
 		if errors.As(err, &maxBytesError) {
