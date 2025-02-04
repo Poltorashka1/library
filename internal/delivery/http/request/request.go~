@@ -37,6 +37,7 @@ func BodyParse(r *http.Request, data any) error {
 	return nil
 }
 
+
 // dataValidate validate data and return reflect.Value of pointer value.
 // Return only debug error.
 func dataValidate(data any) (reflect.Value, error) {

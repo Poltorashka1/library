@@ -56,7 +56,7 @@ type FormParser struct {
 }
 
 // FormParse is a function for parsing request body [*http.Request] in multipart/form-data format to pointer struct.
-// Return error - ErrUnknownContentType, ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge,  MultiError.
+// Return error - ErrUnknownContentType
 func FormParse(r *http.Request, data any) error {
 	err := requestValidate(r)
 	if err != nil {
@@ -155,7 +155,7 @@ func (p *FormParser) setDataValue() error {
 
 // HTTPBodyParse parsing request body [*http.Request] in multipart/form-data format, form value write in
 // [FormParser.Values] and files write in [FormParser.Files].
-// Return error - ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge
+// Return error -  ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge
 func (p *FormParser) HTTPBodyParse(r *http.Request) error {
 	// todo add custom reader
 	reader, err := r.MultipartReader()
