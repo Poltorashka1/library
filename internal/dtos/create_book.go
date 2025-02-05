@@ -12,7 +12,7 @@ import (
 // todo разные форматы isbn
 type CreateBookRequest struct {
 	Title           string     `json:"title" form:"title,required"`
-	ISBN            string     `json:"isbn" form:"isbn"`
+	ISBN            string     `json:"isbn" form:"isbn,optional"`
 	PublicationYear int        `json:"publication-year,required" form:"publication-year,optional"`
 	Description     string     `json:"description" form:"description,required"`
 	Publisher       string     `json:"publisher" form:"publisher,required"`

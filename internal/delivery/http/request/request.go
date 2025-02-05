@@ -94,8 +94,6 @@ func setFieldData(val reflect.Value, payload string, fieldName string) error {
 	return nil
 }
 
-// todo test new func
-
 // getFieldTags get field tags by tag name 'form' or 'query'.
 // Return only debug error.
 func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName string, tag string, err error) {
@@ -114,7 +112,7 @@ func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName str
 		case RequiredTag, OptionalTag:
 			return tags[0], tags[1], nil
 		default:
-			return "", "", fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' has no tags for key '%s'", tag[1], typStruct.Name, tagName)
+			return "", "", fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' for key '%s'", tags[1], typStruct.Name, tagName)
 		}
 	default:
 		if len(tags) > 2 {

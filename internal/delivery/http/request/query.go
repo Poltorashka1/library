@@ -2,6 +2,7 @@ package request
 
 import (
 	"net/http"
+	"net/url"
 	"reflect"
 )
 
@@ -11,12 +12,29 @@ import (
 
 // todo поменять местами ” и 'optional'
 
+type QueryParser struct {
+	val  reflect.Value
+	typ  reflect.Type
+	data any
+
+	Values url.Values
+}
+
 func QueryParse(r *http.Request, data any) error {
 	val, err := dataValidate(data)
 	if err != nil {
 		return err
 	}
-	err = setQueryDataValue(r, val)
+
+	parser := QueryParser{
+		val:    val,
+		typ:    val.Type(),
+		Values: make(url.Values),
+	}
+
+	parser.QueryParse(r)
+
+	err = parser.setQueryDataValue()
 	if err != nil {
 		return err
 	}
@@ -24,22 +42,25 @@ func QueryParse(r *http.Request, data any) error {
 	return nil
 }
 
-func setQueryDataValue(r *http.Request, val reflect.Value) error {
-	var mErr = &MultiError{}
-	typ := val.Type()
+func (p *QueryParser) QueryParse(r *http.Request) {
+	p.Values = r.URL.Query()
+}
 
-	for i := range typ.NumField() {
-		fieldValue := val.Field(i)
-		fieldType := typ.Field(i)
+func (p *QueryParser) setQueryDataValue() error {
+	var mErr = &MultiError{}
+
+	for i := range p.typ.NumField() {
+		fieldValue := p.val.Field(i)
+		fieldType := p.typ.Field(i)
 
 		fieldName, fieldTag, err := getFieldTags(&fieldType, QUERY)
 		if err != nil {
 			return err
 		}
 
-		queryValue := r.URL.Query().Get(fieldName)
+		queryValue := p.Values.Get(fieldName)
 
-		if fieldTag == "required" {
+		if fieldTag == RequiredTag {
 			if queryValue == "" {
 				mErr.err = append(mErr.err, ErrQueryRequired{queryKey: fieldName})
 				continue
@@ -52,7 +73,7 @@ func setQueryDataValue(r *http.Request, val reflect.Value) error {
 
 		err = setFieldData(fieldValue, queryValue, fieldName)
 		if err != nil {
-			if fieldTag == "optional" {
+			if fieldTag == OptionalTag {
 				mErr.err = append(mErr.err, err)
 				continue
 			}

@@ -65,7 +65,7 @@ type FormParser struct {
 // FormParse is a function for parsing request body [*http.Request] in multipart/form-data format to pointer struct.
 // Return error - ErrUnknownContentType, ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge,  MultiError.
 func FormParse(r *http.Request, data any) error {
-	err := requestValidate(r)
+	err := requestContentTypeValidate(r)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func FormParse(r *http.Request, data any) error {
 }
 
 // requestValidate validate request content type and return error - ErrUnknownContentType
-func requestValidate(r *http.Request) error {
+func requestContentTypeValidate(r *http.Request) error {
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return ErrUnknownContentType
 	}
@@ -115,7 +115,7 @@ func (p *FormParser) setDataValue() error {
 		fieldType := p.typ.Field(fieldNum)
 		fieldValue := p.val.Field(fieldNum)
 
-		fieldTagName, tag, err := getFieldTags(&fieldType, FORM)
+		fieldTagName, fieldTag, err := getFieldTags(&fieldType, FORM)
 		if err != nil {
 			return err
 		}
@@ -126,11 +126,11 @@ func (p *FormParser) setDataValue() error {
 
 			file := p.Files[fieldTagName]
 
-			if tag == RequiredTag && len(file) < 1 {
+			if fieldTag == RequiredTag && len(file) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
-			if tag == OptionalTag && len(file) > 1 {
+			if fieldTag == OptionalTag && len(file) > 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
@@ -142,7 +142,7 @@ func (p *FormParser) setDataValue() error {
 			defer p.Files.SetNil(mErr, fieldTagName)
 
 			files := p.Files[fieldTagName]
-			if tag == RequiredTag && len(files) < 1 {
+			if fieldTag == RequiredTag && len(files) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
 				continue
 			}
@@ -151,18 +151,18 @@ func (p *FormParser) setDataValue() error {
 			}
 		default:
 			ok := p.Values.Has(fieldTagName)
-			if !ok && tag == RequiredTag {
+			if !ok && fieldTag == RequiredTag {
 				mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
 				continue
 			}
 
-			if tag == OptionalTag && p.Values.Get(fieldTagName) == "" {
+			if fieldTag == OptionalTag && p.Values.Get(fieldTagName) == "" {
 				continue
 			}
 
 			err = setFieldData(fieldValue, p.Values.Get(fieldTagName), fieldType.Name)
 			if err != nil {
-				if tag == OptionalTag {
+				if fieldTag == OptionalTag {
 					mErr.err = append(mErr.err, err)
 					continue
 				}
