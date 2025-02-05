@@ -11,10 +11,10 @@ import (
 // todo сделать пакет пере используемым для этот избавиться от зависимости с chi пакетом
 
 const (
-	PDF   = "application/pdf"
-	EPUB  = "application/epub+zip"
-	FORM  = "form"
-	QUERY = "query"
+	PDF         = "application/pdf"
+	EPUB        = "application/epub+zip"
+	FORM        = "form"
+	QUERY       = "query"
 	RequiredTag = "required"
 	OptionalTag = "optional"
 )
@@ -98,14 +98,34 @@ func setFieldData(val reflect.Value, payload string, fieldName string) error {
 // Return only debug error.
 func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName string, tag string, err error) {
 	tags := strings.Split(typStruct.Tag.Get(tagName), ",")
+	if tags[0] == "" {
+		return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+	}
+	switch len(tags) {
+	case 1:
+		return tags[0], "", nil
+	case 2:
+		if tags[1] == "" {
+			return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		}
+		return tags[0], tags[1], nil
+	default:
+		if len(tags) > 2 {
+			return "", "", fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", typStruct.Name, tagName)
+		}
+		return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+	}
 	if len(tags) == 1 {
 		if tags[0] == "" {
 			return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
 		}
 		return tags[0], "", nil
 	}
-	if len(tags) >= 2 {
+	if len(tags) == 2 {
 		return tags[0], tags[1], nil
 	}
-	return "", "", nil
+	if len(tags) > 2 {
+		return "", "", fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", typStruct.Name, tagName)
+	}
+	return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
 }
