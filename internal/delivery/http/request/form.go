@@ -45,6 +45,9 @@ func (f Files) SetNil(mErr *MultiError, fileName string) {
 	}
 }
 
+// SupportedContentType is a slice of supported file format
+type SupportedContentType []string
+
 // FormParser is a struct for parsing form data
 type FormParser struct {
 	val  reflect.Value
@@ -53,6 +56,8 @@ type FormParser struct {
 
 	Values url.Values
 	Files  Files
+
+	supportFileFormat SupportedContentType // []string of supported file format in request
 }
 
 // todo test new feature - tag required optional and default
@@ -71,11 +76,12 @@ func FormParse(r *http.Request, data any) error {
 	}
 
 	parser := &FormParser{
-		val:    val,
-		typ:    val.Type(),
-		data:   data,
-		Values: make(url.Values),
-		Files:  make(Files),
+		val:               val,
+		typ:               val.Type(),
+		data:              data,
+		supportFileFormat: SupportedContentType{EPUB, PDF},
+		Values:            make(url.Values),
+		Files:             make(Files),
 	}
 	defer parser.Files.RemoveFiles()
 
@@ -215,7 +221,7 @@ func (p *FormParser) HTTPBodyParse(r *http.Request) error {
 // Return error - ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge.
 // Log file remove error.
 func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file *os.File, err error) {
-	err = validateFilePart(part)
+	err = p.validateFilePart(part)
 	if err != nil {
 		return "", nil, err
 	}
@@ -229,7 +235,7 @@ func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file 
 		if err != nil {
 			err := os.Remove(tempFile.Name())
 			if err != nil {
-				log.Println(err)
+				log.Printf("request: parseFile: file remove error: %s", err)
 			}
 		}
 	}()
@@ -249,13 +255,14 @@ func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file 
 	return strings.ToLower(part.FormName()), tempFile, nil
 }
 
-// todo add content type in FormParser settings.
-
 // validateFilePart validate multipart.Part - content type(only EPUB and PDF), form name, file name
 // Return error - ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong.
-func validateFilePart(part *multipart.Part) error {
+func (p *FormParser) validateFilePart(part *multipart.Part) error {
 	contentType := part.Header.Get("Content-Type")
-	if contentType != EPUB && contentType != PDF {
+	for _, format := range p.supportFileFormat {
+		if format == contentType {
+			break
+		}
 		return ErrInvalidContentType
 	}
 	if !strings.Contains(strings.ToLower(part.FormName()), "file") {

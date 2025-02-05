@@ -11,10 +11,12 @@ import (
 // todo сделать пакет пере используемым для этот избавиться от зависимости с chi пакетом
 
 const (
-	PDF   = "application/pdf"
-	EPUB  = "application/epub+zip"
-	FORM  = "form"
-	QUERY = "query"
+	PDF         = "application/pdf"
+	EPUB        = "application/epub+zip"
+	FORM        = "form"
+	QUERY       = "query"
+	RequiredTag = "required"
+	OptionalTag = "optional"
 )
 
 // BodyParse parse request body in Json or Form format into pointer struct

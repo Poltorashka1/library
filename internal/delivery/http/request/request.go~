@@ -15,6 +15,8 @@ const (
 	EPUB  = "application/epub+zip"
 	FORM  = "form"
 	QUERY = "query"
+	RequiredTag = "required"
+	OptionalTag = "optional"
 )
 
 // BodyParse parse request body in Json or Form format into pointer struct
@@ -36,7 +38,6 @@ func BodyParse(r *http.Request, data any) error {
 
 	return nil
 }
-
 
 // dataValidate validate data and return reflect.Value of pointer value.
 // Return only debug error.
