@@ -50,9 +50,7 @@ type SupportedContentType []string
 
 // FormParser is a struct for parsing form data
 type FormParser struct {
-	val  reflect.Value
-	typ  reflect.Type
-	data any
+	Data *Data
 
 	Values url.Values
 	Files  Files
@@ -60,37 +58,36 @@ type FormParser struct {
 	supportFileFormat SupportedContentType // []string of supported file format in request
 }
 
-// todo test new feature - tag required optional and default
+type Parser struct {
+	MaxFileSize       int
+	supportFileFormat SupportedContentType
+}
 
 // FormParse is a function for parsing request body [*http.Request] in multipart/form-data format to pointer struct.
 // Return error - ErrUnknownContentType, ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge,  MultiError.
 func FormParse(r *http.Request, data any) error {
-	err := requestContentTypeValidate(r)
+	err := requestValidate(r)
 	if err != nil {
 		return err
 	}
 
-	val, err := dataValidate(data)
-	if err != nil {
-		return err
-	}
-
-	parser := &FormParser{
-		val:               val,
-		typ:               val.Type(),
-		data:              data,
+	parser := &Parser{
 		supportFileFormat: SupportedContentType{EPUB, PDF},
-		Values:            make(url.Values),
-		Files:             make(Files),
 	}
-	defer parser.Files.RemoveFiles()
 
-	err = parser.HTTPBodyParse(r)
+	httpData, err := parser.HTTPBodyParse(r)
 	if err != nil {
 		return err
 	}
 
-	err = parser.setDataValue()
+	defer httpData.Files.RemoveFiles()
+
+	d, err := dataCreate(data, httpData)
+	if err != nil {
+		return err
+	}
+
+	err = d.setDataValue()
 	if err != nil {
 		return err
 	}
@@ -99,7 +96,8 @@ func FormParse(r *http.Request, data any) error {
 }
 
 // requestValidate validate request content type and return error - ErrUnknownContentType
-func requestContentTypeValidate(r *http.Request) error {
+func requestValidate(r *http.Request) error {
+	// todo add check request max size
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return ErrUnknownContentType
 	}
@@ -108,13 +106,14 @@ func requestContentTypeValidate(r *http.Request) error {
 
 // setDataValue writes data to fields of a data structure.
 // Return error - MultiError.
-func (p *FormParser) setDataValue() error {
+func (data *Data) setDataValue() error {
 	var mErr = &MultiError{}
-	for fieldNum := range p.typ.NumField() {
+	for fieldNum := range data.typ.NumField() {
 
-		fieldType := p.typ.Field(fieldNum)
-		fieldValue := p.val.Field(fieldNum)
+		fieldType := data.typ.Field(fieldNum)
+		fieldValue := data.val.Field(fieldNum)
 
+		// fieldTag doesn't work if it is a struct field, work only for struct fields
 		fieldTagName, fieldTag, err := getFieldTags(&fieldType, FORM)
 		if err != nil {
 			return err
@@ -122,11 +121,11 @@ func (p *FormParser) setDataValue() error {
 
 		switch fieldType.Type {
 		case reflect.TypeOf((*os.File)(nil)):
-			defer p.Files.SetNil(mErr, fieldTagName)
+			defer data.httpData.Files.SetNil(mErr, fieldTagName)
 
-			file := p.Files[fieldTagName]
+			file := data.httpData.Files[fieldTagName]
 
-			if fieldTag == RequiredTag && len(file) < 1 {
+			if fieldTag == RequiredTag && len(file) < 1 || len(file) > 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
@@ -139,9 +138,9 @@ func (p *FormParser) setDataValue() error {
 				fieldValue.Set(reflect.ValueOf(file[0]))
 			}
 		case reflect.TypeOf(([]*os.File)(nil)):
-			defer p.Files.SetNil(mErr, fieldTagName)
+			defer data.httpData.Files.SetNil(mErr, fieldTagName)
 
-			files := p.Files[fieldTagName]
+			files := data.httpData.Files[fieldTagName]
 			if fieldTag == RequiredTag && len(files) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
 				continue
@@ -150,19 +149,36 @@ func (p *FormParser) setDataValue() error {
 				fieldValue.Set(reflect.ValueOf(files))
 			}
 		default:
-			ok := p.Values.Has(fieldTagName)
+			if fieldValue.Kind() == reflect.Struct {
+				// todo add tags there?
+				d := &Data{
+					val:      fieldValue,
+					typ:      fieldType.Type,
+					httpData: data.httpData,
+				}
+
+				err = d.setDataValue()
+				if err != nil {
+					mErr.err = append(mErr.err, err)
+					continue
+				}
+				fieldValue.Set(d.val)
+				continue
+			}
+
+			ok := data.httpData.Values.Has(fieldTagName)
 			if !ok && fieldTag == RequiredTag {
 				mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
 				continue
 			}
 
-			if fieldTag == OptionalTag && p.Values.Get(fieldTagName) == "" {
+			if fieldTag == OptionalTag && data.httpData.Values.Get(fieldTagName) == "" {
 				continue
 			}
 
-			err = setFieldData(fieldValue, p.Values.Get(fieldTagName), fieldType.Name)
+			err = setField(fieldValue, data.httpData.Values.Get(fieldTagName), fieldType.Name)
 			if err != nil {
-				if fieldTag == OptionalTag {
+				if fieldTag == OptionalTag || fieldTag == RequiredTag {
 					mErr.err = append(mErr.err, err)
 					continue
 				}
@@ -180,11 +196,16 @@ func (p *FormParser) setDataValue() error {
 // HTTPBodyParse parsing request body [*http.Request] in multipart/form-data format, form value write in
 // [FormParser.Values] and files write in [FormParser.Files].
 // Return error - ErrFieldLength, ErrContentToLarge, ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge
-func (p *FormParser) HTTPBodyParse(r *http.Request) error {
+func (parser *Parser) HTTPBodyParse(r *http.Request) (*HttpData, error) {
 	// todo add custom reader
+	var result = &HttpData{
+		Values: make(url.Values),
+		Files:  make(Files),
+	}
+
 	reader, err := r.MultipartReader()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for {
@@ -193,26 +214,25 @@ func (p *FormParser) HTTPBodyParse(r *http.Request) error {
 			if err == io.EOF {
 				break
 			}
-			return err
+			return nil, err
 		}
 
 		if part.FileName() == "" {
-			key, value, err := p.parseFormValue(part)
+			key, value, err := parser.parseFormValue(part)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			p.Values.Add(key, value)
+			result.Values.Add(key, value)
 		} else {
-			fileName, file, err := p.parseFormFile(part)
+			fileName, file, err := parser.parseFormFile(part)
 			if err != nil {
-				//todo use clear func или вообще не стоит использовать тут
-				return err
+				return nil, err
 			}
-			p.Files.Add(fileName, file)
+			result.Files.Add(fileName, file)
 
 		}
 	}
-	return nil
+	return result, nil
 }
 
 // todo if content-type != file type
@@ -220,8 +240,8 @@ func (p *FormParser) HTTPBodyParse(r *http.Request) error {
 // parseFormFile reads a file from a multipart.Part and writes it to a temporary file.
 // Return error - ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong, ErrContentToLarge.
 // Log file remove error.
-func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file *os.File, err error) {
-	err = p.validateFilePart(part)
+func (parser *Parser) parseFormFile(part *multipart.Part) (fileName string, file *os.File, err error) {
+	err = parser.validateFilePart(part)
 	if err != nil {
 		return "", nil, err
 	}
@@ -247,7 +267,7 @@ func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file 
 		}
 	}(tempFile)
 
-	err = readFile(part, tempFile)
+	err = parser.readFile(part, tempFile)
 	if err != nil {
 		return "", nil, err
 	}
@@ -257,14 +277,20 @@ func (p *FormParser) parseFormFile(part *multipart.Part) (fileName string, file 
 
 // validateFilePart validate multipart.Part - content type(only EPUB and PDF), form name, file name
 // Return error - ErrInvalidContentType, ErrInvalidFieldType, ErrFileNameTooLong.
-func (p *FormParser) validateFilePart(part *multipart.Part) error {
+func (parser *Parser) validateFilePart(part *multipart.Part) error {
 	contentType := part.Header.Get("Content-Type")
-	for _, format := range p.supportFileFormat {
+	// todo refactor
+	ok := false
+	for _, format := range parser.supportFileFormat {
 		if format == contentType {
+			ok = true
 			break
 		}
+	}
+	if !ok {
 		return ErrInvalidContentType
 	}
+
 	if !strings.Contains(strings.ToLower(part.FormName()), "file") {
 		return ErrInvalidFieldType
 	}
@@ -276,7 +302,7 @@ func (p *FormParser) validateFilePart(part *multipart.Part) error {
 
 // readFile reads a file from a multipart.Part and writes it to a temporary file.
 // Return error - ErrContentToLarge.
-func readFile(part *multipart.Part, file *os.File) error {
+func (parser *Parser) readFile(part *multipart.Part, file *os.File) error {
 	buf := make([]byte, 4096)
 	for {
 		n, readErr := part.Read(buf)
@@ -301,7 +327,7 @@ func readFile(part *multipart.Part, file *os.File) error {
 
 // parseFormValue reads multipart.Part and returns formValueName and Value.
 // Return error - ErrFieldLength, ErrContentToLarge.
-func (p *FormParser) parseFormValue(part *multipart.Part) (key string, value string, err error) {
+func (parser *Parser) parseFormValue(part *multipart.Part) (key string, value string, err error) {
 	buf := make([]byte, 512)
 	n, err := part.Read(buf)
 	if err != nil {

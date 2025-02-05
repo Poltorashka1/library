@@ -9,8 +9,7 @@ import (
 // todo validate data IMPORTNT
 func JsonParse(r *http.Request, data any) error {
 	// todo if error is EOF
-
-	_, err := dataValidate(data)
+	_, err := dataCreate(data, nil)
 	if err != nil {
 		return err
 	}

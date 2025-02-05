@@ -16,9 +16,8 @@ type QueryParser struct {
 	Values url.Values
 }
 
-// todo refactor
 func QueryParse(r *http.Request, data any) error {
-	d, err := dataCreate(data, nil)
+	d, err := dataCreate(data)
 	if err != nil {
 		return err
 	}

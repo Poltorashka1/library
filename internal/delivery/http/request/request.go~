@@ -3,6 +3,7 @@ package request
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
 	"strings"
@@ -39,34 +40,47 @@ func BodyParse(r *http.Request, data any) error {
 	return nil
 }
 
-// dataValidate validate data and return reflect.Value of pointer value.
+// dataCreate validate data and return [*Data].
 // Return only debug error.
-func dataValidate(data any) (reflect.Value, error) {
+func dataCreate(data any, httpData *HttpData) (*Data, error) {
 	if data == nil {
-		return reflect.Value{}, fmt.Errorf("request: data cannot be nil")
+		return nil, fmt.Errorf("request: data cannot be nil")
 	}
 
 	val := reflect.ValueOf(data)
 
 	if val.Kind() != reflect.Pointer {
-		return reflect.Value{}, fmt.Errorf("request: data need to be pointer to the structure")
+		return nil, fmt.Errorf("request: data need to be pointer to the structure")
 	}
 
 	if val.IsNil() {
-		return reflect.Value{}, fmt.Errorf("request: data must be a non-nil pointer")
+		return nil, fmt.Errorf("request: data must be a non-nil pointer")
 	}
 
 	if val.Elem().Kind() != reflect.Struct {
-		return reflect.Value{}, fmt.Errorf("request: transmitted pointer must point to the structure")
+		return nil, fmt.Errorf("request: transmitted pointer must point to the structure")
 	}
 
-	val = val.Elem()
-	return val, nil
+	return &Data{val: val.Elem(), typ: val.Elem().Type(), httpData: httpData}, nil
 }
 
-// setFieldData set payload to field [reflect.Value] of data structure.
+// Data is a struct for data
+type Data struct {
+	val reflect.Value
+	typ reflect.Type
+
+	httpData *HttpData
+}
+
+// HttpData is a struct for values from [*http.Request]
+type HttpData struct {
+	Values url.Values
+	Files  Files
+}
+
+// setField set payload to field [reflect.Value] of data structure.
 // Return type convert error.
-func setFieldData(val reflect.Value, payload string, fieldName string) error {
+func setField(val reflect.Value, payload string, fieldName string) error {
 	switch val.Kind() {
 	case reflect.String:
 		val.SetString(payload)
@@ -93,7 +107,6 @@ func setFieldData(val reflect.Value, payload string, fieldName string) error {
 	}
 	return nil
 }
-
 
 // getFieldTags get field tags by tag name 'form' or 'query'.
 // Return only debug error.
