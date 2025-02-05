@@ -126,11 +126,11 @@ func (p *FormParser) setDataValue() error {
 
 			file := p.Files[fieldTagName]
 
-			if tag == "required" && len(file) < 1 {
+			if tag == RequiredTag && len(file) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
-			if tag == "optional" && len(file) > 1 {
+			if tag == OptionalTag && len(file) > 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single file; ", fieldTagName))
 				continue
 			}
@@ -142,7 +142,7 @@ func (p *FormParser) setDataValue() error {
 			defer p.Files.SetNil(mErr, fieldTagName)
 
 			files := p.Files[fieldTagName]
-			if tag == "required" && len(files) < 1 {
+			if tag == RequiredTag && len(files) < 1 {
 				mErr.err = append(mErr.err, fmt.Errorf("the field '%s' must be a single or more files; ", fieldTagName))
 				continue
 			}
@@ -151,18 +151,18 @@ func (p *FormParser) setDataValue() error {
 			}
 		default:
 			ok := p.Values.Has(fieldTagName)
-			if !ok && tag == "required" {
+			if !ok && tag == RequiredTag {
 				mErr.err = append(mErr.err, ErrFieldRequired{field: fieldTagName})
 				continue
 			}
 
-			if tag == "optional" && p.Values.Get(fieldTagName) == "" {
+			if tag == OptionalTag && p.Values.Get(fieldTagName) == "" {
 				continue
 			}
 
 			err = setFieldData(fieldValue, p.Values.Get(fieldTagName), fieldType.Name)
 			if err != nil {
-				if tag == "optional" {
+				if tag == OptionalTag {
 					mErr.err = append(mErr.err, err)
 					continue
 				}
