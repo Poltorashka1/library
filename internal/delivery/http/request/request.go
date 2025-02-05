@@ -107,10 +107,15 @@ func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName str
 	case 1:
 		return tags[0], "", nil
 	case 2:
-		if tags[1] == "" {
-			return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		switch tags[1] {
+		case "":
+			return tags[0], "", nil
+			//return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		case RequiredTag, OptionalTag:
+			return tags[0], tags[1], nil
+		default:
+			return "", "", fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' has no tags for key '%s'", tag[1], typStruct.Name, tagName)
 		}
-		return tags[0], tags[1], nil
 	default:
 		if len(tags) > 2 {
 			return "", "", fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", typStruct.Name, tagName)

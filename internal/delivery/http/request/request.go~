@@ -94,6 +94,8 @@ func setFieldData(val reflect.Value, payload string, fieldName string) error {
 	return nil
 }
 
+// todo test new func
+
 // getFieldTags get field tags by tag name 'form' or 'query'.
 // Return only debug error.
 func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName string, tag string, err error) {
@@ -105,27 +107,19 @@ func getFieldTags(typStruct *reflect.StructField, tagName string) (fieldName str
 	case 1:
 		return tags[0], "", nil
 	case 2:
-		if tags[1] == "" {
-			return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		switch tags[1] {
+		case "":
+			return "", "", nil
+			//return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		case RequiredTag, OptionalTag:
+			return tags[0], tags[1], nil
+		default:
+			return "", "", fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' has no tags for key '%s'", tag[1], typStruct.Name, tagName)
 		}
-		return tags[0], tags[1], nil
 	default:
 		if len(tags) > 2 {
 			return "", "", fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", typStruct.Name, tagName)
 		}
-		return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
+		return "", "", fmt.Errorf("request: getFieldTags: unknown error: field: '%s', key: '%s'", typStruct.Name, tagName)
 	}
-	if len(tags) == 1 {
-		if tags[0] == "" {
-			return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
-		}
-		return tags[0], "", nil
-	}
-	if len(tags) == 2 {
-		return tags[0], tags[1], nil
-	}
-	if len(tags) > 2 {
-		return "", "", fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", typStruct.Name, tagName)
-	}
-	return "", "", fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", typStruct.Name, tagName)
 }
