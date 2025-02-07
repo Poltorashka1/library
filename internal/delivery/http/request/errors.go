@@ -14,6 +14,7 @@ var (
 	ErrFieldLength        = errors.New("file length exceeds the limit")
 	ErrInvalidFieldType   = errors.New("only 'file' field can contain file content")
 	ErrFileNameTooLong    = errors.New("file name too long, max length 100")
+	ErrFieldName          = errors.New("invalid field name")
 )
 
 type ErrFieldType struct {

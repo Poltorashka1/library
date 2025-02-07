@@ -18,7 +18,7 @@ type QueryParser struct {
 
 // todo refactor
 func QueryParse(r *http.Request, data any) error {
-	d, err := dataCreate(data, nil)
+	d, err := dataCreate(data)
 	if err != nil {
 		return err
 	}
@@ -30,10 +30,10 @@ func QueryParse(r *http.Request, data any) error {
 
 	parser.QueryParse(r)
 
-	err = parser.setQueryDataValue()
-	if err != nil {
-		return err
-	}
+	//err = parser.setQueryDataValue()
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
@@ -42,42 +42,42 @@ func (p *QueryParser) QueryParse(r *http.Request) {
 	p.Values = r.URL.Query()
 }
 
-func (p *QueryParser) setQueryDataValue() error {
-	var mErr = &MultiError{}
-
-	for i := range p.Data.typ.NumField() {
-		fieldValue := p.Data.val.Field(i)
-		fieldType := p.Data.typ.Field(i)
-
-		fieldName, fieldTag, err := getFieldTags(&fieldType, QUERY)
-		if err != nil {
-			return err
-		}
-
-		queryValue := p.Values.Get(fieldName)
-
-		if fieldTag == RequiredTag {
-			if queryValue == "" {
-				mErr.err = append(mErr.err, ErrQueryRequired{queryKey: fieldName})
-				continue
-			}
-		}
-
-		if queryValue == "" {
-			continue
-		}
-
-		err = setField(fieldValue, queryValue, fieldName)
-		if err != nil {
-			if fieldTag == OptionalTag {
-				mErr.err = append(mErr.err, err)
-				continue
-			}
-			continue
-		}
-	}
-	if mErr.err != nil {
-		return mErr
-	}
-	return nil
-}
+//func (p *QueryParser) setQueryDataValue() error {
+//	var mErr = &MultiError{}
+//
+//	for i := range p.Data.typ.NumField() {
+//		fieldValue := p.Data.val.Field(i)
+//		fieldType := p.Data.typ.Field(i)
+//
+//		fieldTags, err := getFieldTags(&fieldType, QUERY)
+//		if err != nil {
+//			return err
+//		}
+//
+//		queryValue := p.Values.Get(fieldTags.fieldTagName)
+//
+//		if fieldTags.fieldTag == RequiredTag {
+//			if queryValue == "" {
+//				mErr.err = append(mErr.err, ErrQueryRequired{queryKey: fieldTags.fieldTagName})
+//				continue
+//			}
+//		}
+//
+//		if queryValue == "" {
+//			continue
+//		}
+//
+//		err = setField(fieldValue, queryValue, fieldTags.fieldTagName)
+//		if err != nil {
+//			if fieldTags.fieldTag == OptionalTag {
+//				mErr.err = append(mErr.err, err)
+//				continue
+//			}
+//			continue
+//		}
+//	}
+//	if mErr.err != nil {
+//		return mErr
+//	}
+//	return nil
+//}

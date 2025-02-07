@@ -13,11 +13,14 @@ import (
 type CreateBookRequest struct {
 	BookInfo BookInfo `json:"book-info" form:"book-info"`
 	Files    Files    `json:"files" form:"files"`
+	File     File     `json:"file" form:"file"`
 }
 
 type Files struct {
-	File  *os.File   `form:"file,required"`
 	Files []*os.File `form:"files,required"`
+}
+type File struct {
+	File *os.File `form:"file,required"`
 }
 
 type BookInfo struct {

@@ -16,8 +16,8 @@ type CreateBookRequest struct {
 }
 
 type Files struct {
-	File  *os.File   `form:"file"`
-	Files []*os.File `form:"files"`
+	File  *os.File   `form:"file,required"`
+	Files []*os.File `form:"files,required"`
 }
 
 type BookInfo struct {
@@ -70,17 +70,17 @@ func optimizeString(s string) string {
 }
 
 func (r *CreateBookRequest) isbnValidate(e *apperrors.ValidationErrors) {
-	if r.ISBN == "" {
+	if r.BookInfo.ISBN == "" {
 		e.Errors = append(e.Errors, errors.New("empty field ISBN; "))
 		return
 	}
 
-	r.ISBN = optimizeString(r.ISBN)
+	r.BookInfo.ISBN = optimizeString(r.BookInfo.ISBN)
 
 }
 
 func (r *CreateBookRequest) publicationYearValidate(e *apperrors.ValidationErrors) {
-	if r.PublicationYear <= 0 {
+	if r.BookInfo.PublicationYear <= 0 {
 		e.Errors = append(e.Errors, errors.New("publication year must be greater than 0; "))
 		return
 	}
