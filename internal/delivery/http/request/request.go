@@ -168,9 +168,10 @@ func (field *Field) setField(payload string) error {
 
 func field(data *Data, fieldNum int) (*Field, error) {
 	field := &Field{
-		typ:     data.typ.Field(fieldNum),
-		val:     data.val.Field(fieldNum),
-		tagType: data.tagType,
+		typ:      data.typ.Field(fieldNum),
+		val:      data.val.Field(fieldNum),
+		tagType:  data.tagType,
+		httpData: data.httpData,
 	}
 	err := field.getFieldTags()
 	if err != nil {

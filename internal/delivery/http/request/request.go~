@@ -41,6 +41,8 @@ type Field struct {
 
 	tagType string
 	tags    FieldTags
+
+	httpData *HttpData
 }
 
 // FieldTags is a struct for struct field

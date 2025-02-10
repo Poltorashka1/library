@@ -24,14 +24,14 @@ type ErrContentToLarge struct {
 func (e *ErrContentToLarge) Error() string {
 	// return ib bytes
 	if e.limit < 1024 {
-		return fmt.Sprintf("content too large, max size %d bytes", e.limit)
+		return fmt.Sprintf("the total size of thr transmitted data exceeds the maximum limit in %d bytes", e.limit)
 	}
 	// return ib kb
 	if e.limit < 1048576 {
-		return fmt.Sprintf("content too large, max size %d kb", e.limit/1024)
+		return fmt.Sprintf("the total size of thr transmitted data exceeds the maximum limit in %d kb", e.limit/1024)
 	}
 	// return ib mb
-	return fmt.Sprintf("content too large, max size %d mb", e.limit/(1024*1024))
+	return fmt.Sprintf("the total size of thr transmitted data exceeds the maximum limit in %d mb", e.limit/(1024*1024))
 }
 
 type ErrFormValueToLarge struct {
