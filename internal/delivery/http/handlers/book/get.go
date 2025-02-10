@@ -44,12 +44,15 @@ func (h *bookHandlers) Books(w http.ResponseWriter, r *http.Request) {
 		Limit: h.cfg.DefaultBooksLimit(),
 		Page:  h.cfg.DefaultBooksPageNumber(),
 	}
+	fmt.Println(payload)
+
 	err := request.QueryParse(r, payload)
 	if err != nil {
+		// todo other error
 		var mErr *request.MultiError
 		switch {
 		case errors.As(err, &mErr):
-			response.Error(w, mErr, http.StatusBadRequest)
+			response.Error(w, mErr, http.StatusUnprocessableEntity)
 			return
 		default:
 			h.logger.Error(err.Error())
@@ -58,31 +61,6 @@ func (h *bookHandlers) Books(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Printf("%+v\n", payload)
-	// todo payload validate
-	//pageStr := r.URL.Query().Get("page")
-	//if pageStr == "" {
-	//	pageStr = h.cfg.BooksPageNumber()
-	//}
-	//
-	//limitStr := r.URL.Query().Get("limit")
-	//if limitStr == "" {
-	//	limitStr = h.cfg.BooksLimit()
-	//}
-	//
-	//page, err := strconv.Atoi(pageStr)
-	//if err != nil {
-	//	response.Error(w, err, http.StatusBadRequest)
-	//	return
-	//}
-
-	//limit, err := strconv.Atoi(limitStr)
-	//if err != nil {
-	//	response.Error(w, err, http.StatusBadRequest)
-	//	return
-	//}
-
-	//var payload = dtos.BooksRequest{Limit: limit, Page: page}
-
 	// todo handle error
 	books, err := h.useCase.Books(r.Context(), payload)
 	if err != nil {

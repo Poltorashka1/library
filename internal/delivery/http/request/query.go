@@ -2,63 +2,47 @@ package request
 
 import (
 	"net/http"
-	"reflect"
 )
 
-// required - обязательное поле, должно быть значение
-// - не обязательное поле, если придут невалидные данные будет ошибка
-// optional - не обязательное поле со значением по умолчанию, если придут невалидные данные ошибки не будет
+// 'required' - обязательное поле, должно быть значение
+// '' - не обязательное поле, если придут невалидные данные ошибки не будет
+// optional - не обязательное поле со значением по умолчанию, если придут невалидные данные будет ошибка
 
-func QueryParse(r *http.Request, data any) error {
-	val, err := dataValidate(data)
-	if err != nil {
-		return err
-	}
-	err = setQueryDataValue(r, val)
-	if err != nil {
-		return err
-	}
-
-	return nil
+// queryParser is a struct for parsing requestQuery
+type queryParser struct {
+	data *data
 }
 
-func setQueryDataValue(r *http.Request, val reflect.Value) error {
-	var mErr = &MultiError{}
-	typ := val.Type()
-
-	for i := range typ.NumField() {
-		fieldValue := val.Field(i)
-		fieldType := typ.Field(i)
-
-		fieldName, fieldTag, err := getFieldTags(&fieldType, QUERY)
-		if err != nil {
-			return err
-		}
-
-		queryValue := r.URL.Query().Get(fieldName)
-
-		if fieldTag == "required" {
-			if queryValue == "" {
-				mErr.err = append(mErr.err, ErrQueryRequired{queryKey: fieldName})
-				continue
-			}
-		}
-
-		if queryValue == "" {
-			continue
-		}
-
-		err = setFieldData(fieldValue, queryValue, fieldName)
-		if err != nil {
-			if fieldTag == "optional" {
-				mErr.err = append(mErr.err, err)
-				continue
-			}
-			continue
-		}
+// QueryParse is a function for parsing request query into pointer struct.
+// Possible errors:
+// MultiError;
+func QueryParse(r *http.Request, payload any) error {
+	d, err := newData(payload, query)
+	if err != nil {
+		return err
 	}
+
+	parser := queryParser{
+		data: d,
+	}
+
+	parser.queryParse(r)
+
+	var mErr = &MultiError{}
+	err = d.setDataValue(mErr)
+	if err != nil {
+		return err
+	}
+
 	if mErr.err != nil {
 		return mErr
 	}
 	return nil
+}
+
+// queryParse parsing request query, and write values in requestData.Values
+func (parser *queryParser) queryParse(r *http.Request) {
+	parser.data.requestData = &requestData{
+		Values: r.URL.Query(),
+	}
 }

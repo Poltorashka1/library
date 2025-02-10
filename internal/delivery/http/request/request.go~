@@ -189,6 +189,7 @@ func (d *data) newField(fieldNum int) (*field, error) {
 	return field, nil
 }
 
+// todo add trimSpaces in tags and test it
 // getFieldTags get fieldTags by tag name 'form' or 'query'.
 // Return only Error level error.
 func (f *field) getFieldTags() (err error) {

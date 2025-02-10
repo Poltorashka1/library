@@ -26,7 +26,7 @@ type File struct {
 }
 
 type BookInfo struct {
-	Title           string `json:"title" form:"title,required"`
+	Title           string `json:"title" form:"title,  required  "`
 	ISBN            string `json:"isbn" form:"isbn,required"`
 	PublicationYear int    `json:"publication_year,required" form:"publication_year,optional"`
 	Description     string `json:"description" form:"description,"`
