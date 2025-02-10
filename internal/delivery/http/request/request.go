@@ -11,6 +11,11 @@ import (
 	"strings"
 )
 
+var (
+	fileType  = reflect.TypeOf((*os.File)(nil))
+	filesType = reflect.TypeOf(([]*os.File)(nil))
+)
+
 const (
 	form        = "form"
 	query       = "query"
@@ -27,16 +32,16 @@ type data struct {
 	requestData *requestData
 }
 
-// requestData is a struct for values from [*http.Request]
+// requestData is a struct for values from request
 type requestData struct {
 	Values url.Values
 	Files  files
 }
 
-// files is a map of file names to a slice of files
+// files is a map of file names to a slice of os.File
 type files map[string][]*os.File
 
-// field is a struct for structField
+// field is a struct for data structField
 type field struct {
 	typ reflect.StructField
 	val reflect.Value
@@ -47,7 +52,7 @@ type field struct {
 	requestData *requestData
 }
 
-// fieldTags is a struct for struct field
+// fieldTags is a struct with tags for field
 type fieldTags struct {
 	// Name - field tag name
 	Name string
@@ -55,7 +60,7 @@ type fieldTags struct {
 	Tag string
 }
 
-// RemoveFiles removes any temporary files associated with a [Files].
+// RemoveFiles removes any temporary files.
 // Log delete file errors.
 func (f files) RemoveFiles() {
 	if f == nil {
@@ -80,7 +85,7 @@ func (f files) RemoveFiles() {
 	}
 }
 
-// Add adds a file [*os.File] by key fileName to the [Files] map.
+// Add adds a file os.File by key fileName to the [Files] map.
 func (f files) Add(fileName string, file *os.File) {
 	f[fileName] = append(f[fileName], file)
 }
@@ -170,7 +175,7 @@ func (f *field) setField(payload string) error {
 }
 
 // newField set data structField value into field value.
-func newField(d *data, fieldNum int) (*field, error) {
+func (d *data) newField(fieldNum int) (*field, error) {
 	field := &field{
 		typ:         d.typ.Field(fieldNum),
 		val:         d.val.Field(fieldNum),
@@ -184,8 +189,7 @@ func newField(d *data, fieldNum int) (*field, error) {
 	return field, nil
 }
 
-// todo add trimSpaces in tags and test it
-// getFieldTags get field tags by tag name 'form' or 'query'.
+// getFieldTags get fieldTags by tag name 'form' or 'query'.
 // Return only Error level error.
 func (f *field) getFieldTags() (err error) {
 	if f.tagType == "" {
@@ -227,7 +231,7 @@ func (f *field) getFieldTags() (err error) {
 	}
 }
 
-// setDataValue writes data to fields of a data structure.
+// setDataValue writes value to fields of a data structure.
 // Return error - MultiError.
 func (d *data) setDataValue(mErr *MultiError) error {
 	if mErr == nil {
@@ -238,18 +242,18 @@ func (d *data) setDataValue(mErr *MultiError) error {
 	}
 
 	for fieldNum := range d.typ.NumField() {
-		field, err := newField(d, fieldNum)
+		field, err := d.newField(fieldNum)
 		if err != nil {
 			return err
 		}
 		if field.typ.IsExported() {
 			switch field.typ.Type {
-			case FileType:
+			case fileType:
 				err := field.setFileValue(mErr)
 				if err != nil {
 					return err
 				}
-			case FilesType:
+			case filesType:
 				err := field.setFilesValue(mErr)
 				if err != nil {
 					mErr.Add(err)
@@ -266,6 +270,7 @@ func (d *data) setDataValue(mErr *MultiError) error {
 	return nil
 }
 
+// setFileValue writes file os.File to field value.
 func (f *field) setFileValue(mErr *MultiError) error {
 	file := f.requestData.Files[f.tags.Name]
 
@@ -285,6 +290,7 @@ func (f *field) setFileValue(mErr *MultiError) error {
 	return nil
 }
 
+// setFilesValue writes files os.File to field value.
 func (f *field) setFilesValue(mErr *MultiError) error {
 	files := f.requestData.Files[f.tags.Name]
 	if f.tags.Tag == requiredTag && len(files) < 1 {
@@ -298,6 +304,7 @@ func (f *field) setFilesValue(mErr *MultiError) error {
 	return nil
 }
 
+// setDefaultValue writes value to field.
 func (f *field) setDefaultValue(mErr *MultiError) error {
 	if f == nil {
 		return errors.New("request: setDefaultValue: field cannot be nil")
@@ -320,7 +327,8 @@ func (f *field) setDefaultValue(mErr *MultiError) error {
 
 	ok := f.requestData.Values.Has(f.tags.Name)
 	if !ok && f.tags.Tag == requiredTag {
-		mErr.Add(ErrFieldRequired{field: f.tags.Name})
+		//mErr.Add(ErrFieldRequired{field: f.tags.Name})
+		mErr.Add(fmt.Errorf("the field '%s' is required; ", f.tags.Name))
 		return nil
 	}
 

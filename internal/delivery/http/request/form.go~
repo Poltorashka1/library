@@ -10,25 +10,18 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"reflect"
 	"slices"
 	"strings"
 )
 
-// todo refactor comments
 // todo add несколько режимов работы библиотеки.
 // todo add payload validation?
 // todo обобщить ошибки
 // todo возможность ограничивать поле не по размеру, а по количеству символов
 
-var (
-	FileType  = reflect.TypeOf((*os.File)(nil))
-	FilesType = reflect.TypeOf(([]*os.File)(nil))
-)
-
 const (
-	PDF  = "application/pdf"
-	EPUB = "application/epub+zip"
+	pdf  = "application/pdf"
+	epub = "application/epub+zip"
 )
 
 // parserConfig is a config params for formParser
@@ -43,18 +36,17 @@ type parserConfig struct {
 	supportFileFormat supportedFileType
 }
 
-// SupportedFileType is a slice of supported file format
+// supportedFileType is a slice of supported file format
 type supportedFileType []string
 
-// FormParser is a struct for parsing request body [*http.Request] in multipart/form-data format
+// formParser is a struct for parsing request body in multipart/form-data format
 type formParser struct {
-	cfg  parserConfig
-	data *data
-	// todo new type there
+	cfg            parserConfig
+	data           *data
 	dataFieldsTags []string
 }
 
-// HasField is a function for checking if the request form field exists in source struct, if not return false.
+// HasField is a function for checking if the request form field exists in source struct
 func (parser *formParser) HasField(key string) bool {
 	if !slices.Contains(parser.dataFieldsTags, strings.ToLower(key)) {
 		return false
@@ -92,7 +84,7 @@ func FormParse(r *http.Request, payload any) error {
 			maxFormValueSize:  512,
 			maxBodySize:       104857600,
 			maxFileSize:       31457280,
-			supportFileFormat: supportedFileType{EPUB, PDF},
+			supportFileFormat: supportedFileType{pdf, epub},
 		},
 		data:           d,
 		dataFieldsTags: tags,
@@ -112,8 +104,7 @@ func FormParse(r *http.Request, payload any) error {
 
 	tags = nil
 	parser = nil
-	// todo а происходит ли запись в поля не экспортируемые
-	// todo проверить что тут нет ошибок так как возможно парсер не меняет данные оригинального обьекта
+
 	err = d.setDataValue(mErr)
 	if err != nil {
 		return err
@@ -135,8 +126,8 @@ func formRequestValidate(r *http.Request) error {
 	return nil
 }
 
-// HTTPBodyParse parsing request body in multipart/form-data format, form value write in
-// HttpData.Values and files write in HttpData.Files if return error automatically remove all files.
+// httpBodyParse parsing request body in multipart/form-data format, and write values in
+// requestData.Values and files write in requestData.Files if return error automatically remove all files.
 // Possible errors:
 // - ErrContentToLarge
 // - ErrFieldName
@@ -185,7 +176,9 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 				//result.Files.RemoveFiles()
 				return err
 			}
-			result.Values.Add(key, value)
+			if key != "" {
+				result.Values.Add(key, value)
+			}
 		} else {
 			fileName, file, err := parser.parseFormFile(part)
 			if err != nil {
@@ -199,7 +192,7 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 	return nil
 }
 
-// parseFormValue reads multipart.Part and returns formFieldName and FieldValue.
+// parseFormValue reads multipart.Part and returns formFieldName and formFieldValue.
 // Return error - ErrFieldName, ErrContentToLarge, ErrFormValueToLarge.
 func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName string, formFieldValue string, err error) {
 	if part.FormName() == "" {
@@ -242,6 +235,9 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 		if readErr == io.EOF {
 			break
 		}
+	}
+	if result.Len() <= 0 {
+		return "", "", nil
 	}
 	return part.FormName(), result.String(), nil
 }
@@ -298,7 +294,7 @@ func (parser *formParser) parseFormFile(part *multipart.Part) (fileName string, 
 	return strings.ToLower(part.FormName()), tempFile, nil
 }
 
-// validateFilePart validate multipart.Part - content type(only EPUB and PDF), form name, file name
+// validateFilePart validate multipart.Part - content type, form name, file name
 // Return error - ErrInvalidFileType, ErrFileNameTooLong.
 func (parser *formParser) validateFilePart(part *multipart.Part) error {
 	if !slices.Contains(parser.cfg.supportFileFormat, part.Header.Get("Content-Type")) {

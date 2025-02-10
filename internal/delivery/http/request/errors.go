@@ -13,9 +13,9 @@ var (
 	ErrFileNameTooLong    = errors.New("file name too long, max length 100")
 )
 
-type UnprocessableEntity interface {
-	UnprocessableEntity()
-}
+//type UnprocessableEntity interface {
+//	UnprocessableEntity()
+//}
 
 // ErrContentToLarge returns if content size more than allowed in bytes/kb/mb
 type ErrContentToLarge struct {
@@ -71,7 +71,8 @@ type ErrFieldName struct {
 func (e *ErrFieldName) Error() string {
 	return fmt.Sprintf("invalid field name '%s'", e.fieldName)
 }
-func (e *ErrFieldName) UnprocessableEntity() {}
+
+//func (e *ErrFieldName) UnprocessableEntity() {}
 
 // ErrFieldType returns if field type
 type ErrFieldType struct {
@@ -83,13 +84,13 @@ func (e *ErrFieldType) Error() string {
 	return fmt.Sprintf("the field '%s' must be of type %s", e.field, e.typ)
 }
 
-type ErrFieldRequired struct {
-	field string
-}
-
-func (e ErrFieldRequired) Error() string {
-	return fmt.Sprintf("the field '%s' is required; ", e.field)
-}
+//type ErrFieldRequired struct {
+//	field string
+//}
+//
+//func (e ErrFieldRequired) Error() string {
+//	return fmt.Sprintf("the field '%s' is required; ", e.field)
+//}
 
 // MultiError returns all field validation errors for example fieldType/fieldRequired
 type MultiError struct {
@@ -108,7 +109,7 @@ func (e *MultiError) Error() string {
 	return err
 }
 
-func (e *MultiError) UnprocessableEntity() {}
+//func (e *MultiError) UnprocessableEntity() {}
 
 type ErrQueryRequired struct {
 	queryKey string

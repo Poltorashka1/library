@@ -56,8 +56,8 @@ func (u *bookUseCase) Book(ctx context.Context, uuid string) (*dtos.BookResponse
 
 func (u *bookUseCase) Books(ctx context.Context, payload *dtos.BooksRequest) (*dtos.BooksResponse, error) {
 	filter := entities.BookFilter{
-		Start: (payload.Page - 1) * payload.Limit,
-		Stop:  (payload.Page-1)*payload.Limit + payload.Limit,
+		Start: (payload.BookRequest.Page - 1) * payload.BookRequest.Limit,
+		Stop:  (payload.BookRequest.Page-1)*payload.BookRequest.Limit + payload.BookRequest.Limit,
 	}
 
 	// get books list with authors
