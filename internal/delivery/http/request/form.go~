@@ -49,7 +49,7 @@ type supportedFileType []string
 // FormParser is a struct for parsing request body [*http.Request] in multipart/form-data format
 type formParser struct {
 	cfg  parserConfig
-	data *Data
+	data *data
 	// todo new type there
 	dataFieldsTags []string
 }
@@ -77,7 +77,7 @@ func FormParse(r *http.Request, payload any) error {
 		return err
 	}
 
-	d, err := data(payload, FORM)
+	d, err := newData(payload, form)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func FormParse(r *http.Request, payload any) error {
 		dataFieldsTags: tags,
 	}
 
-	d.httpData, err = parser.HTTPBodyParse(r)
+	err = parser.httpBodyParse(r)
 	if err != nil {
 		return err
 	}
@@ -106,13 +106,14 @@ func FormParse(r *http.Request, payload any) error {
 	var mErr = &MultiError{}
 	defer func() {
 		if err != nil || mErr.err != nil {
-			d.httpData.Files.RemoveFiles()
+			d.requestData.Files.RemoveFiles()
 		}
 	}()
 
 	tags = nil
 	parser = nil
-
+	// todo а происходит ли запись в поля не экспортируемые
+	// todo проверить что тут нет ошибок так как возможно парсер не меняет данные оригинального обьекта
 	err = d.setDataValue(mErr)
 	if err != nil {
 		return err
@@ -144,17 +145,17 @@ func formRequestValidate(r *http.Request) error {
 // - ErrInvalidFileType
 // - ErrFileNameTooLong
 // - ErrFormValueToLarge
-func (parser *formParser) HTTPBodyParse(r *http.Request) (httpData *HttpData, err error) {
+func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 	if parser.cfg.maxBodySize > 0 {
 		if r.ContentLength > int64(parser.cfg.maxBodySize) {
-			return nil, &ErrContentToLarge{limit: parser.cfg.maxBodySize}
+			return &ErrContentToLarge{limit: parser.cfg.maxBodySize}
 		}
 		r.Body = http.MaxBytesReader(nil, r.Body, int64(parser.cfg.maxBodySize))
 	}
 
-	var result = &HttpData{
+	var result = &requestData{
 		Values: make(url.Values),
-		Files:  make(Files),
+		Files:  make(files),
 	}
 
 	defer func() {
@@ -166,7 +167,7 @@ func (parser *formParser) HTTPBodyParse(r *http.Request) (httpData *HttpData, er
 	// todo add custom reader
 	reader, err := r.MultipartReader()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for {
@@ -175,26 +176,27 @@ func (parser *formParser) HTTPBodyParse(r *http.Request) (httpData *HttpData, er
 			if err == io.EOF {
 				break
 			}
-			return nil, err
+			return err
 		}
 
 		if part.FileName() == "" {
 			key, value, err := parser.parseFormValue(part)
 			if err != nil {
 				//result.Files.RemoveFiles()
-				return nil, err
+				return err
 			}
 			result.Values.Add(key, value)
 		} else {
 			fileName, file, err := parser.parseFormFile(part)
 			if err != nil {
 				//result.Files.RemoveFiles()
-				return nil, err
+				return err
 			}
 			result.Files.Add(fileName, file)
 		}
 	}
-	return result, nil
+	parser.data.requestData = result
+	return nil
 }
 
 // parseFormValue reads multipart.Part and returns formFieldName and FieldValue.
@@ -309,7 +311,6 @@ func (parser *formParser) validateFilePart(part *multipart.Part) error {
 	return nil
 }
 
-// todo add support max one file size
 // readFile reads a file from a multipart.Part and writes it to a temporary file.
 // Return error - ErrContentToLarge, ErrFormValueToLarge.
 func (parser *formParser) readFile(part *multipart.Part, file *os.File) error {
@@ -340,114 +341,6 @@ func (parser *formParser) readFile(part *multipart.Part, file *os.File) error {
 		if readErr == io.EOF {
 			break
 		}
-	}
-	return nil
-}
-
-// setDataValue writes data to fields of a data structure.
-// Return error - MultiError.
-func (data *Data) setDataValue(mErr *MultiError) error {
-	if data.httpData == nil {
-		return errors.New("request: setDataValue: httpData cannot be nil")
-	}
-
-	for fieldNum := range data.typ.NumField() {
-		field, err := field(data, fieldNum)
-		if err != nil {
-			return err
-		}
-
-		switch field.typ.Type {
-		case FileType:
-			err := field.setFileValue(mErr)
-			if err != nil {
-				return err
-			}
-		case FilesType:
-			err := field.setFilesValue(mErr)
-			if err != nil {
-				mErr.Add(err)
-				return err
-			}
-		default:
-			err := field.setDefaultValue(mErr)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (field *Field) setFileValue(mErr *MultiError) error {
-	file := field.httpData.Files[field.tags.Name]
-
-	if field.tags.Tag == RequiredTag && len(file) < 1 || len(file) > 1 {
-		mErr.Add(fmt.Errorf("the field '%s' must be a single file; ", field.tags.Name))
-		return nil
-	}
-	if field.tags.Tag == OptionalTag && len(file) > 1 {
-		mErr.Add(fmt.Errorf("the field '%s' must be a single file; ", field.tags.Name))
-		return nil
-	}
-
-	if file != nil {
-		field.val.Set(reflect.ValueOf(file[0]))
-	}
-
-	return nil
-}
-
-func (field *Field) setFilesValue(mErr *MultiError) error {
-	files := field.httpData.Files[field.tags.Name]
-	if field.tags.Tag == RequiredTag && len(files) < 1 {
-		mErr.Add(fmt.Errorf("the field '%s' must be a single or more files; ", field.tags.Name))
-		return nil
-	}
-
-	if files != nil {
-		field.val.Set(reflect.ValueOf(files))
-	}
-	return nil
-}
-
-func (field *Field) setDefaultValue(mErr *MultiError) error {
-	if field == nil {
-		return errors.New("request: setDefaultValue: field cannot be nil")
-	}
-	if field.val.Kind() == reflect.Struct {
-		d := &Data{
-			val:      field.val,
-			typ:      field.typ.Type,
-			tagType:  field.tagType,
-			httpData: field.httpData,
-		}
-
-		err := d.setDataValue(mErr)
-		if err != nil {
-			return err
-		}
-		field.val.Set(d.val)
-		return nil
-	}
-
-	ok := field.httpData.Values.Has(field.tags.Name)
-	if !ok && field.tags.Tag == RequiredTag {
-		mErr.Add(ErrFieldRequired{field: field.tags.Name})
-		return nil
-	}
-
-	if field.tags.Tag == OptionalTag && field.httpData.Values.Get(field.tags.Name) == "" {
-		return nil
-	}
-
-	err := field.setField(field.httpData.Values.Get(field.tags.Name))
-	if err != nil {
-		if field.tags.Tag == OptionalTag || field.tags.Tag == RequiredTag {
-			mErr.Add(err)
-			return nil
-		}
-		return nil
 	}
 	return nil
 }

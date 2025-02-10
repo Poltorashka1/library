@@ -13,10 +13,10 @@ type BookResponse struct {
 }
 
 type BooksRequest struct {
-	BookRequest BoookRequest
+	bookRequest bookRequest
 }
 
-type BoookRequest struct {
+type bookRequest struct {
 	Limit int `query:"limit,required"`
 	Page  int `query:"page"`
 }

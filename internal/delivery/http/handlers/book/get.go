@@ -37,13 +37,17 @@ func (h *bookHandlers) Book(w http.ResponseWriter, r *http.Request) {
 	// response.Success(w, book, JSON)
 }
 
+// todo проверить если в не обязательное поле записываются не валидные данные перебивается ли значение по умолчанию
 func (h *bookHandlers) Books(w http.ResponseWriter, r *http.Request) {
 	const op = "Books"
 	//todo error if page == 0 fix it
 	var payload = &dtos.BooksRequest{
-		Limit: h.cfg.DefaultBooksLimit(),
-		Page:  h.cfg.DefaultBooksPageNumber(),
+		BookRequest: dtos.BoookRequest{
+			Limit: h.cfg.DefaultBooksLimit(),
+			Page:  h.cfg.DefaultBooksPageNumber(),
+		},
 	}
+
 	err := request.QueryParse(r, payload)
 	if err != nil {
 		var mErr *request.MultiError
@@ -96,7 +100,7 @@ func (h *bookHandlers) Books(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookTempl := templates.Books(*books, payload.Page, payload.Limit)
+	bookTempl := templates.Books(*books, payload.BookRequest.Page, payload.BookRequest.Limit)
 	temp := templates.Layout(bookTempl, "Books")
 	err = temp.Render(r.Context(), w)
 	if err != nil {

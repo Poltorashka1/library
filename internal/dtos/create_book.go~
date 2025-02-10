@@ -13,13 +13,9 @@ import (
 // todo test form parsing с использованием встраивания
 
 type CreateBookRequest struct {
-	Te       Te       `form:"te,required"`
-	BookInfo BookInfo `json:"book-info" form:"book-info"`
+	BookInfo BookInfo `json:"book_info" form:"book_info"`
 	Files    Files    `json:"files" form:"files"`
 	File     File     `json:"file" form:"file"`
-}
-
-type Te struct {
 }
 
 type Files struct {
@@ -35,6 +31,7 @@ type BookInfo struct {
 	PublicationYear int    `json:"publication_year,required" form:"publication_year,optional"`
 	Description     string `json:"description" form:"description,"`
 	Publisher       string `json:"publisher" form:"publisher,required"`
+	testField       string `form:"test_field,required"`
 }
 
 type CreateBookResponse struct {

@@ -1,6 +1,7 @@
 package request
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -11,42 +12,43 @@ import (
 )
 
 const (
-	FORM        = "form"
-	QUERY       = "query"
-	RequiredTag = "required"
-	OptionalTag = "optional"
+	form        = "form"
+	query       = "query"
+	requiredTag = "required"
+	optionalTag = "optional"
 )
 
-// Data is a struct for payload reflect.Type, reflect.Value and tagType(example 'form' or 'json')
-type Data struct {
+// data is a struct for payload reflect.Type, reflect.Value and tagType(example 'form' or 'json')
+type data struct {
 	val reflect.Value
 	typ reflect.Type
 
-	tagType  string
-	httpData *HttpData
+	tagType     string
+	requestData *requestData
 }
 
-// HttpData is a struct for values from [*http.Request]
-type HttpData struct {
+// requestData is a struct for values from [*http.Request]
+type requestData struct {
 	Values url.Values
-	Files  Files
+	Files  files
 }
 
-// Files is a map of file names to a slice of files
-type Files map[string][]*os.File
+// files is a map of file names to a slice of files
+type files map[string][]*os.File
 
-type Field struct {
+// field is a struct for structField
+type field struct {
 	typ reflect.StructField
 	val reflect.Value
 
 	tagType string
-	tags    FieldTags
+	tags    fieldTags
 
-	httpData *HttpData
+	requestData *requestData
 }
 
-// FieldTags is a struct for struct field
-type FieldTags struct {
+// fieldTags is a struct for struct field
+type fieldTags struct {
 	// Name - field tag name
 	Name string
 	// Tag - field tag value(required/optional)
@@ -55,7 +57,7 @@ type FieldTags struct {
 
 // RemoveFiles removes any temporary files associated with a [Files].
 // Log delete file errors.
-func (f Files) RemoveFiles() {
+func (f files) RemoveFiles() {
 	if f == nil {
 		log.Printf("request: RemoveFiles: files is nil")
 		return
@@ -79,19 +81,19 @@ func (f Files) RemoveFiles() {
 }
 
 // Add adds a file [*os.File] by key fileName to the [Files] map.
-func (f Files) Add(fileName string, file *os.File) {
+func (f files) Add(fileName string, file *os.File) {
 	f[fileName] = append(f[fileName], file)
 }
 
 // fieldTags returns a slice of Data fieldTagName it need to validate request form fields names.
 // Return only Error level error.
-func (data *Data) fieldTags() ([]string, error) {
+func (d *data) fieldTags() ([]string, error) {
 	tags := make([]string, 0)
 
-	for field := range data.typ.NumField() {
-		if data.typ.Field(field).Type.Kind() == reflect.Struct {
-			newData := Data{val: data.val.Field(field), typ: data.typ.Field(field).Type, tagType: data.tagType}
-			embeddedTags, err := newData.fieldTags()
+	for f := range d.typ.NumField() {
+		if d.typ.Field(f).Type.Kind() == reflect.Struct {
+			nData := data{val: d.val.Field(f), typ: d.typ.Field(f).Type, tagType: d.tagType}
+			embeddedTags, err := nData.fieldTags()
 			if err != nil {
 				return nil, err
 			}
@@ -99,22 +101,23 @@ func (data *Data) fieldTags() ([]string, error) {
 
 			continue
 		}
-		fd := Field{typ: data.typ.Field(field), val: data.val.Field(field), tagType: data.tagType}
-
-		// todo mb solo function to get only tag name
-		err := fd.getFieldTags()
-		if err != nil {
-			return nil, err
+		fd := field{typ: d.typ.Field(f), val: d.val.Field(f), tagType: d.tagType}
+		if fd.typ.IsExported() {
+			// todo mb solo function to get only tag name
+			err := fd.getFieldTags()
+			if err != nil {
+				return nil, err
+			}
+			tags = append(tags, fd.tags.Name)
 		}
-		tags = append(tags, fd.tags.Name)
 	}
 	return tags, nil
 }
 
-// data validate payload pointer to the struct and return *Data.
+// newData validate payload pointer to the struct and return *Data.
 // tagType is tag name example 'form' or 'json' it depends on what request format is being read.
 // Return only Error level error.
-func data(payload any, tagType string) (*Data, error) {
+func newData(payload any, tagType string) (*data, error) {
 	if payload == nil {
 		return nil, fmt.Errorf("request: payload cannot be nil")
 	}
@@ -133,45 +136,46 @@ func data(payload any, tagType string) (*Data, error) {
 		return nil, fmt.Errorf("request: transmitted pointer must point to the structure")
 	}
 
-	return &Data{val: val.Elem(), typ: val.Elem().Type(), tagType: tagType}, nil
+	return &data{val: val.Elem(), typ: val.Elem().Type(), tagType: tagType}, nil
 }
 
 // setField set payload value into field value.
 // Return type convert error.
-func (field *Field) setField(payload string) error {
-	switch field.val.Kind() {
+func (f *field) setField(payload string) error {
+	switch f.val.Kind() {
 	case reflect.String:
-		field.val.SetString(payload)
+		f.val.SetString(payload)
 	case reflect.Int:
 		//if data == "" {
 		//	data = "0"
 		//}
 		digit, err := strconv.Atoi(payload)
 		if err != nil {
-			return fmt.Errorf("the field '%s' must be a digit; ", field.tags.Name)
+			return fmt.Errorf("the field '%s' must be a digit; ", f.tags.Name)
 		}
-		field.val.SetInt(int64(digit))
+		f.val.SetInt(int64(digit))
 	case reflect.Float64:
 		//if data == "" {
 		//	data = "0"
 		//}
-		f, err := strconv.ParseFloat(payload, 64)
+		parsF, err := strconv.ParseFloat(payload, 64)
 		if err != nil {
-			return fmt.Errorf("the field '%s' must be a float digit; ", field.tags.Name)
+			return fmt.Errorf("the field '%s' must be a float digit; ", f.tags.Name)
 		}
-		field.val.SetFloat(f)
+		f.val.SetFloat(parsF)
 	default:
-		return fmt.Errorf("unknown field type: %s", field.tags.Name)
+		return fmt.Errorf("unknown field type: %s", f.tags.Name)
 	}
 	return nil
 }
 
-func field(data *Data, fieldNum int) (*Field, error) {
-	field := &Field{
-		typ:      data.typ.Field(fieldNum),
-		val:      data.val.Field(fieldNum),
-		tagType:  data.tagType,
-		httpData: data.httpData,
+// newField set data structField value into field value.
+func newField(d *data, fieldNum int) (*field, error) {
+	field := &field{
+		typ:         d.typ.Field(fieldNum),
+		val:         d.val.Field(fieldNum),
+		tagType:     d.tagType,
+		requestData: d.requestData,
 	}
 	err := field.getFieldTags()
 	if err != nil {
@@ -183,39 +187,154 @@ func field(data *Data, fieldNum int) (*Field, error) {
 // todo add trimSpaces in tags and test it
 // getFieldTags get field tags by tag name 'form' or 'query'.
 // Return only Error level error.
-func (field *Field) getFieldTags() (err error) {
-	if field.tagType == "" {
+func (f *field) getFieldTags() (err error) {
+	if f.tagType == "" {
 		return fmt.Errorf("request: getFieldTags: tagType cannot be empty")
 	}
 
-	tags := strings.Split(field.typ.Tag.Get(field.tagType), ",")
+	tags := strings.Split(f.typ.Tag.Get(f.tagType), ",")
 	if tags[0] == "" {
-		return fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", field.typ.Name, field.tagType)
+		if f.typ.Type.Kind() == reflect.Struct {
+			return nil
+		}
+		return fmt.Errorf("request: getFieldTags: field '%s' has no tags for key '%s'", f.typ.Name, f.tagType)
 	}
 	switch len(tags) {
 	case 1:
-		field.tags.Name = tags[0]
+		f.tags.Name = tags[0]
 		return nil
 		//return &FieldTags{tags[0], ""}, nil
 	case 2:
 		switch tags[1] {
 		case "":
-			field.tags.Name = tags[0]
+			f.tags.Name = tags[0]
 			return nil
 			//return &FieldTags{tags[0], ""}, nil
 			//return "", "", fmt.Errorf("request: getFieldTags: invalid tags for field '%s' has no tags for key '%s'", typStruct.Name, tagName)
-		case RequiredTag, OptionalTag:
-			field.tags.Name = tags[0]
-			field.tags.Tag = tags[1]
+		case requiredTag, optionalTag:
+			f.tags.Name = tags[0]
+			f.tags.Tag = tags[1]
 			return nil
 			//return &FieldTags{tags[0], tags[1]}, nil
 		default:
-			return fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' for key '%s'", tags[1], field.typ.Name, field.tagType)
+			return fmt.Errorf("request: getFieldTags: unsuported tag '%s' for field '%s' for key '%s'", tags[1], f.typ.Name, f.tagType)
 		}
 	default:
 		if len(tags) > 2 {
-			return fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", field.typ.Name, field.tagType)
+			return fmt.Errorf("request: getFieldTags: field '%s' has too many tags for key '%s', only 2 allowed", f.typ.Name, f.tagType)
 		}
-		return fmt.Errorf("request: getFieldTags: unknown error: field: '%s', key: '%s'", field.typ.Name, field.tagType)
+		return fmt.Errorf("request: getFieldTags: unknown error: field: '%s', key: '%s'", f.typ.Name, f.tagType)
 	}
+}
+
+// setDataValue writes data to fields of a data structure.
+// Return error - MultiError.
+func (d *data) setDataValue(mErr *MultiError) error {
+	if mErr == nil {
+		return errors.New("request: setDataValue: mErr cannot be nil")
+	}
+	if d.requestData == nil {
+		return errors.New("request: setDataValue: httpData cannot be nil")
+	}
+
+	for fieldNum := range d.typ.NumField() {
+		field, err := newField(d, fieldNum)
+		if err != nil {
+			return err
+		}
+		if field.typ.IsExported() {
+			switch field.typ.Type {
+			case FileType:
+				err := field.setFileValue(mErr)
+				if err != nil {
+					return err
+				}
+			case FilesType:
+				err := field.setFilesValue(mErr)
+				if err != nil {
+					mErr.Add(err)
+					return err
+				}
+			default:
+				err := field.setDefaultValue(mErr)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (f *field) setFileValue(mErr *MultiError) error {
+	file := f.requestData.Files[f.tags.Name]
+
+	if f.tags.Tag == requiredTag && len(file) < 1 || len(file) > 1 {
+		mErr.Add(fmt.Errorf("the field '%s' must be a single file; ", f.tags.Name))
+		return nil
+	}
+	if f.tags.Tag == optionalTag && len(file) > 1 {
+		mErr.Add(fmt.Errorf("the field '%s' must be a single file; ", f.tags.Name))
+		return nil
+	}
+
+	if file != nil {
+		f.val.Set(reflect.ValueOf(file[0]))
+	}
+
+	return nil
+}
+
+func (f *field) setFilesValue(mErr *MultiError) error {
+	files := f.requestData.Files[f.tags.Name]
+	if f.tags.Tag == requiredTag && len(files) < 1 {
+		mErr.Add(fmt.Errorf("the field '%s' must be a single or more files; ", f.tags.Name))
+		return nil
+	}
+
+	if files != nil {
+		f.val.Set(reflect.ValueOf(files))
+	}
+	return nil
+}
+
+func (f *field) setDefaultValue(mErr *MultiError) error {
+	if f == nil {
+		return errors.New("request: setDefaultValue: field cannot be nil")
+	}
+	if f.val.Kind() == reflect.Struct {
+		d := &data{
+			val:         f.val,
+			typ:         f.typ.Type,
+			tagType:     f.tagType,
+			requestData: f.requestData,
+		}
+
+		err := d.setDataValue(mErr)
+		if err != nil {
+			return err
+		}
+		f.val.Set(d.val)
+		return nil
+	}
+
+	ok := f.requestData.Values.Has(f.tags.Name)
+	if !ok && f.tags.Tag == requiredTag {
+		mErr.Add(ErrFieldRequired{field: f.tags.Name})
+		return nil
+	}
+
+	if f.tags.Tag == optionalTag && f.requestData.Values.Get(f.tags.Name) == "" {
+		return nil
+	}
+
+	err := f.setField(f.requestData.Values.Get(f.tags.Name))
+	if err != nil {
+		if f.tags.Tag == optionalTag || f.tags.Tag == requiredTag {
+			mErr.Add(err)
+			return nil
+		}
+		return nil
+	}
+	return nil
 }

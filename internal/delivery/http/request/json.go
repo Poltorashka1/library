@@ -9,7 +9,7 @@ import (
 // todo validate data IMPORTNT
 func JsonParse(r *http.Request, payload any) error {
 	// todo if error is EOF
-	_, err := data(payload, "JSON_")
+	_, err := newData(payload, "JSON_")
 	if err != nil {
 		return err
 	}

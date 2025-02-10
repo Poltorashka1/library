@@ -13,7 +13,7 @@ import (
 // todo test form parsing с использованием встраивания
 
 type CreateBookRequest struct {
-	BookInfo BookInfo `json:"book-info" form:"book-info"`
+	BookInfo BookInfo `json:"book_info" form:"book_info"`
 	Files    Files    `json:"files" form:"files"`
 	File     File     `json:"file" form:"file"`
 }

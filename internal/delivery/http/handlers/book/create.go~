@@ -13,7 +13,6 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 	payload := &dtos.CreateBookRequest{}
 
 	// todo Request Entity Too Large
-	// todo add error for ErrUnknownContentType
 	err := request.FormParse(r, payload)
 	if err != nil {
 		h.handleError(w, err)

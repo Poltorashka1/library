@@ -26,7 +26,7 @@ func QueryParse(r *http.Request, payload any) error {
 
 	parser.queryParse(r)
 
-	var mErr = &MultiError{}
+	var mErr *MultiError
 	err = d.setDataValue(mErr)
 	if err != nil {
 		return err
