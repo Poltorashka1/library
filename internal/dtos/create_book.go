@@ -10,6 +10,8 @@ import (
 
 // todo обезопасить то большого количества данных в строках
 // todo разные форматы isbn
+// todo test form parsing с использованием встраивания
+
 type CreateBookRequest struct {
 	BookInfo BookInfo `json:"book-info" form:"book-info"`
 	Files    Files    `json:"files" form:"files"`
@@ -26,8 +28,8 @@ type File struct {
 type BookInfo struct {
 	Title           string `json:"title" form:"title,required"`
 	ISBN            string `json:"isbn" form:"isbn,required"`
-	PublicationYear int    `json:"publication-year,required" form:"publication-year,required"`
-	Description     string `json:"description" form:"description,optional"`
+	PublicationYear int    `json:"publication_year,required" form:"publication_year,optional"`
+	Description     string `json:"description" form:"description,"`
 	Publisher       string `json:"publisher" form:"publisher,required"`
 }
 

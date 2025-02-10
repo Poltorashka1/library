@@ -7,14 +7,14 @@ import (
 )
 
 // todo validate data IMPORTNT
-func JsonParse(r *http.Request, data any) error {
+func JsonParse(r *http.Request, payload any) error {
 	// todo if error is EOF
-	_, err := dataCreate(data)
+	_, err := data(payload, "JSON_")
 	if err != nil {
 		return err
 	}
 
-	err = json.NewDecoder(r.Body).Decode(data)
+	err = json.NewDecoder(r.Body).Decode(payload)
 	if err != nil {
 		var eUnmarshal *json.UnmarshalTypeError
 		if ok := errors.As(err, &eUnmarshal); ok {

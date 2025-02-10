@@ -17,8 +17,8 @@ type QueryParser struct {
 }
 
 // todo refactor
-func QueryParse(r *http.Request, data any) error {
-	d, err := dataCreate(data)
+func QueryParse(r *http.Request, payload any) error {
+	d, err := data(payload, QUERY)
 	if err != nil {
 		return err
 	}
