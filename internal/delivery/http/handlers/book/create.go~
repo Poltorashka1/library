@@ -48,6 +48,7 @@ func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
 	var fnErr *request.ErrFieldName
 	var fileType *request.ErrInvalidFileType
 	var maxSize *request.ErrContentToLarge
+	var maxFileSize *request.ErrFileToLarge
 	var maxFieldSize *request.ErrFormValueToLarge
 	switch {
 	case errors.As(err, &maxFieldSize):
@@ -72,6 +73,9 @@ func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
 		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
 	case errors.As(err, &maxSize):
+		response.Error(w, err, http.StatusRequestEntityTooLarge)
+		return
+	case errors.As(err, &maxFileSize):
 		response.Error(w, err, http.StatusRequestEntityTooLarge)
 		return
 	case errors.Is(err, request.ErrFileNameTooLong):

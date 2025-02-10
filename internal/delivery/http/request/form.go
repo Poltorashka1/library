@@ -16,6 +16,8 @@ import (
 
 // todo refactor comments
 // todo add несколько режимов работы библиотеки.
+// todo add payload validation?
+// todo обобщить ошибки
 
 var (
 	FileType  = reflect.TypeOf((*os.File)(nil))
@@ -185,7 +187,7 @@ func (parser *formParser) HTTPBodyParse(r *http.Request) (httpData *HttpData, er
 // Return error - ErrFieldName, ErrContentToLarge, ErrFieldLength.
 func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName string, formFieldValue string, err error) {
 	// todo test this
-
+	// todo add custom error in maxFormValue with field name
 	if !parser.HasField(part.FormName()) {
 		return "", "", &ErrFieldName{fieldName: part.FormName()}
 	}
@@ -195,7 +197,7 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 	buf := make([]byte, 4096)
 	for {
 		n, readErr := part.Read(buf)
-		if readErr != nil || readErr != io.EOF {
+		if readErr != nil && readErr != io.EOF {
 			var maxBytesError *http.MaxBytesError
 			if errors.As(err, &maxBytesError) {
 				return "", "", &ErrContentToLarge{limit: parser.cfg.maxBodySize}
@@ -206,9 +208,10 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 			if parser.cfg.maxFormValueSize != 0 {
 				readSize += n
 				if readSize > parser.cfg.maxFormValueSize {
-					return "", "", &ErrContentToLarge{limit: parser.cfg.maxFormValueSize}
+					return "", "", &ErrFormValueToLarge{formField: part.FormName(), limit: parser.cfg.maxFormValueSize}
 				}
 			}
+			// todo optimize
 			result = append(result, buf[:n]...)
 		}
 
@@ -295,7 +298,7 @@ func (parser *formParser) readFile(part *multipart.Part, file *os.File) error {
 			if parser.cfg.maxFileSize != 0 {
 				readBytes += n
 				if readBytes > parser.cfg.maxFileSize {
-					return &ErrFileToLarge{limit: parser.cfg.maxFileSize}
+					return &ErrFormValueToLarge{formField: part.FormName(), limit: parser.cfg.maxFileSize}
 				}
 			}
 			if _, writeErr := file.Write(buf[:n]); writeErr != nil {
@@ -331,7 +334,6 @@ func (data *Data) setDataValue(mErr *MultiError, httpData *HttpData) error {
 				mErr.Add(err)
 				return err
 			}
-
 		default:
 			err := field.setDefaultValue(httpData, mErr)
 			if err != nil {

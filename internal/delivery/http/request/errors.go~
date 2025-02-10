@@ -52,15 +52,15 @@ func (e *ErrFormValueToLarge) Error() string {
 	return fmt.Sprintf("the size of the '%s' field has been exceeded, max size %d mb", e.formField, e.limit/(1024*1024))
 }
 
-//// ErrFileToLarge returns if file size more than allowed in mb
-//type ErrFileToLarge struct {
-//	formField string
-//	limit     int
-//}
-//
-//func (e *ErrFileToLarge) Error() string {
-//	return fmt.Sprintf("file size too large, max size %d mb", e.limit/(1024*1024))
-//}
+// ErrFileToLarge returns if file size more than allowed in mb
+type ErrFileToLarge struct {
+	formField string
+	limit     int
+}
+
+func (e *ErrFileToLarge) Error() string {
+	return fmt.Sprintf("file size too large, max size %d mb", e.limit/(1024*1024))
+}
 
 type ErrInvalidFileType struct {
 	fileType string

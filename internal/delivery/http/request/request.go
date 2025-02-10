@@ -22,7 +22,8 @@ type Data struct {
 	val reflect.Value
 	typ reflect.Type
 
-	tagType string
+	tagType  string
+	httpData *HttpData
 }
 
 // HttpData is a struct for values from [*http.Request]
@@ -40,6 +41,8 @@ type Field struct {
 
 	tagType string
 	tags    FieldTags
+
+	httpData *HttpData
 }
 
 // FieldTags is a struct for struct field
