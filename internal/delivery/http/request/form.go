@@ -190,26 +190,33 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 		return "", "", &ErrFieldName{fieldName: part.FormName()}
 	}
 
-	// todo refactor
-	// todo check if in buffer придут за раз не все данные, возможно поток не успеет заполниться
-	// read in form part in buffer if form part size > buffer size return error
-	//var readSize int
+	var result []byte
+	var readSize int
 	buf := make([]byte, 4096)
 	for {
-		n, err := part.Read(buf)
-		if err != nil {
-			if err == io.EOF && n >= 0 {
-				return strings.ToLower(part.FormName()), string(buf[:n]), nil
-			}
-			// if sum of all bytes read from form part > buffer size return error
+		n, readErr := part.Read(buf)
+		if readErr != nil || readErr != io.EOF {
 			var maxBytesError *http.MaxBytesError
 			if errors.As(err, &maxBytesError) {
 				return "", "", &ErrContentToLarge{limit: parser.cfg.maxBodySize}
 			}
-			return "", "", err
+			return "", "", fmt.Errorf("request: readFile: failed to read part: %w", readErr)
 		}
-		return "", "", ErrFieldLength
+		if n > 0 {
+			if parser.cfg.maxFormValueSize != 0 {
+				readSize += n
+				if readSize > parser.cfg.maxFormValueSize {
+					return "", "", &ErrContentToLarge{limit: parser.cfg.maxFormValueSize}
+				}
+			}
+			result = append(result, buf[:n]...)
+		}
+
+		if readErr == io.EOF {
+			break
+		}
 	}
+	return part.FormName(), string(result), nil
 }
 
 // todo if content-type != file type
@@ -281,7 +288,7 @@ func (parser *formParser) readFile(part *multipart.Part, file *os.File) error {
 			if errors.As(readErr, &maxBytesError) {
 				return &ErrContentToLarge{limit: parser.cfg.maxBodySize}
 			}
-			return fmt.Errorf("failed to read part: %w", readErr)
+			return fmt.Errorf("request: readFile: failed to read part: %w", readErr)
 		}
 
 		if n > 0 {
@@ -299,28 +306,6 @@ func (parser *formParser) readFile(part *multipart.Part, file *os.File) error {
 		if readErr == io.EOF {
 			break
 		}
-
-		//if n > 0 {
-		//	if parser.cfg.maxFileSize != 0 {
-		//		readBytes += n
-		//		if readBytes > parser.cfg.maxFileSize {
-		//			return &ErrFileToLarge{limit: parser.cfg.maxFileSize}
-		//		}
-		//	}
-		//	if _, writeErr := file.Write(buf[:n]); writeErr != nil {
-		//		return fmt.Errorf("failed to write to temp file: %w", writeErr)
-		//	}
-		//}
-		//if readErr != nil {
-		//	if readErr == io.EOF {
-		//		break
-		//	}
-		//	var maxBytesError *http.MaxBytesError
-		//	if errors.As(readErr, &maxBytesError) {
-		//		return &ErrContentToLarge{limit: parser.cfg.maxBodySize}
-		//	}
-		//	return fmt.Errorf("failed to read part: %w", readErr)
-		//}
 	}
 	return nil
 }

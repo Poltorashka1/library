@@ -77,7 +77,6 @@ func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
 	case errors.Is(err, request.ErrFileNameTooLong):
 		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
-
 	case errors.Is(err, request.ErrFieldLength):
 		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
