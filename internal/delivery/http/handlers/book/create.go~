@@ -16,10 +16,6 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 	// todo add error for ErrUnknownContentType
 	err := request.FormParse(r, payload)
 	if err != nil {
-		if errors.Is(err, request.ErrUnknownContentType) {
-			response.Error(w, err, http.StatusBadRequest)
-			return
-		}
 		h.handleError(w, err)
 		return
 	}
@@ -43,39 +39,28 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
-	var mErr *request.MultiError
-	var ftErr *request.ErrFieldType
-	var fnErr *request.ErrFieldName
+	var multiErr *request.MultiError
+	var fileNameErr *request.ErrFieldName
 	var fileType *request.ErrInvalidFileType
 	var maxSize *request.ErrContentToLarge
-	var maxFileSize *request.ErrFileToLarge
 	var maxFieldSize *request.ErrFormValueToLarge
 	switch {
+	case errors.Is(err, request.ErrUnknownContentType):
+		response.Error(w, err, http.StatusBadRequest)
+		return
 	case errors.As(err, &maxFieldSize):
 		response.Error(w, err, http.StatusRequestEntityTooLarge)
 		return
-	case errors.As(err, &fnErr):
+	case errors.As(err, &fileNameErr):
 		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
-	case errors.As(err, &mErr):
+	case errors.As(err, &multiErr):
 		response.Error(w, err, http.StatusBadRequest)
-		return
-	case errors.As(err, &ftErr):
-		response.Error(w, err, http.StatusUnprocessableEntity)
-		return
-	case errors.Is(err, request.ErrInvalidJsonSyntax):
-		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
 	case errors.As(err, &fileType):
 		response.Error(w, err, http.StatusUnsupportedMediaType)
 		return
-	case errors.Is(err, request.ErrInvalidFieldType):
-		response.Error(w, err, http.StatusUnprocessableEntity)
-		return
 	case errors.As(err, &maxSize):
-		response.Error(w, err, http.StatusRequestEntityTooLarge)
-		return
-	case errors.As(err, &maxFileSize):
 		response.Error(w, err, http.StatusRequestEntityTooLarge)
 		return
 	case errors.Is(err, request.ErrFileNameTooLong):

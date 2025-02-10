@@ -91,7 +91,7 @@ func (e ErrFieldRequired) Error() string {
 	return fmt.Sprintf("the field '%s' is required; ", e.field)
 }
 
-// MultiError returns all field validation errors for example fieldType/fieldRequired
+// MultiError returns all validation errors,
 type MultiError struct {
 	err []error
 }
