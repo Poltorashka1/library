@@ -219,12 +219,9 @@ func (d *data) decodeJson(mErr *MultiError) error {
 //}
 
 func (d *data) getObject(mErr *MultiError) error {
-
 	var depth int
 	inString := false
-	expectComma := false
 	var start int
-
 	for i, v := range d.requestData.Json {
 		z := string(v)
 		_ = z

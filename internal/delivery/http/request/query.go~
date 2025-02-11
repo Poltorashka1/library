@@ -17,7 +17,7 @@ type queryParser struct {
 // Possible errors:
 // MultiError;
 func QueryParse(r *http.Request, payload any) error {
-	d, err := newData(payload, "query")
+	d, err := newData(payload, query)
 	if err != nil {
 		return err
 	}

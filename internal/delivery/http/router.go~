@@ -37,6 +37,8 @@ func NewHTTPRouter(handlers handlers.Handlers) Router {
 	return r
 }
 
+// todo add http method not found
+
 func (r *router) initRoutes(handlers handlers.Handlers) {
 	r.MethodFunc("GET", "/notFound", handlers.NotFound)
 

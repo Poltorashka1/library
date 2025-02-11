@@ -19,7 +19,7 @@ var (
 
 // ErrContentToLarge returns if content size more than allowed in bytes/kb/mb
 type ErrContentToLarge struct {
-	limit int64
+	limit int
 }
 
 func (e *ErrContentToLarge) Error() string {

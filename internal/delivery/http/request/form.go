@@ -25,10 +25,11 @@ const (
 	epub = "application/epub+zip"
 )
 
+// todo add validation
 // parserConfig is a config params for formParser
-type parserConfig struct {
+type formParserConfig struct {
 	// max request body size
-	maxBodySize int
+	maxBodySize int64
 	// max formValueField size
 	maxFormValueSize int
 	// max one file size
@@ -42,7 +43,7 @@ type supportedFileType []string
 
 // formParser is a struct for parsing request body in multipart/form-data format
 type formParser struct {
-	cfg            parserConfig
+	cfg            formParserConfig
 	data           *data
 	dataFieldsTags []string
 }
@@ -70,7 +71,7 @@ func FormParse(r *http.Request, payload any) error {
 		return err
 	}
 
-	d, err := newData(payload, form)
+	d, err := newData(payload, "form")
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func FormParse(r *http.Request, payload any) error {
 	}
 
 	parser := &formParser{
-		cfg: parserConfig{
+		cfg: formParserConfig{
 			maxFormValueSize:  512,
 			maxBodySize:       104857600,
 			maxFileSize:       31457280,
@@ -139,10 +140,10 @@ func formRequestValidate(r *http.Request) error {
 // - ErrFormValueToLarge
 func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 	if parser.cfg.maxBodySize > 0 {
-		if r.ContentLength > int64(parser.cfg.maxBodySize) {
+		if r.ContentLength > parser.cfg.maxBodySize {
 			return &ErrContentToLarge{limit: parser.cfg.maxBodySize}
 		}
-		r.Body = http.MaxBytesReader(nil, r.Body, int64(parser.cfg.maxBodySize))
+		r.Body = http.MaxBytesReader(nil, r.Body, parser.cfg.maxBodySize)
 	}
 
 	var result = &requestData{

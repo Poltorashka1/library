@@ -56,6 +56,7 @@ func (r *router) initRoutes(handlers handlers.Handlers) {
 	r.MethodFunc("GET", "/authors/{name}/{surname}/{patronymic}", handlers.Author)
 	r.MethodFunc("POST", "/authors", handlers.CreateAuthor)
 	r.MethodFunc("DELETE", "/authors/{name}/{surname}/{patronymic}", handlers.DeleteAuthor)
+	r.MethodFunc("POST", "/jsonTest", handlers.JSONTest)
 	//todo refactor if work
 	//r.MethodFunc("GET", "/web/static/css/{name}", func(w http.ResponseWriter, r *http.Request) {
 	//	fmt.Println("/web/static/css/" + r.URL.Path[len("/web/static/css/"):])

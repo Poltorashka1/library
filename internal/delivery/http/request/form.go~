@@ -15,6 +15,7 @@ import (
 )
 
 // todo add несколько режимов работы библиотеки.
+// todo поменять местами ” и 'optional'
 // todo add payload validation?
 // todo обобщить ошибки
 // todo возможность ограничивать поле не по размеру, а по количеству символов
@@ -24,8 +25,9 @@ const (
 	epub = "application/epub+zip"
 )
 
+// todo add validation
 // parserConfig is a config params for formParser
-type parserConfig struct {
+type formParserConfig struct {
 	// max request body size
 	maxBodySize int
 	// max formValueField size
@@ -41,7 +43,7 @@ type supportedFileType []string
 
 // formParser is a struct for parsing request body in multipart/form-data format
 type formParser struct {
-	cfg            parserConfig
+	cfg            formParserConfig
 	data           *data
 	dataFieldsTags []string
 }
@@ -69,7 +71,7 @@ func FormParse(r *http.Request, payload any) error {
 		return err
 	}
 
-	d, err := newData(payload, form)
+	d, err := newData(payload, "form")
 	if err != nil {
 		return err
 	}
@@ -80,7 +82,7 @@ func FormParse(r *http.Request, payload any) error {
 	}
 
 	parser := &formParser{
-		cfg: parserConfig{
+		cfg: formParserConfig{
 			maxFormValueSize:  512,
 			maxBodySize:       104857600,
 			maxFileSize:       31457280,

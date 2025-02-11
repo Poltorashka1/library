@@ -17,8 +17,8 @@ var (
 )
 
 const (
-	form        = "form"
-	query       = "query"
+	//form        = "form"
+	//query       = "query"
 	requiredTag = "required"
 	optionalTag = "optional"
 )
@@ -34,6 +34,9 @@ type data struct {
 
 // requestData is a struct for values from request
 type requestData struct {
+	//Buff *bytes.Buffer
+	Json string
+	//Buff   bytes.Buffer
 	Values url.Values
 	Files  files
 }
@@ -90,6 +93,8 @@ func (f files) Add(fileName string, file *os.File) {
 	f[fileName] = append(f[fileName], file)
 }
 
+
+// todo optimize add method in payload struct to get all field name
 // fieldTags returns a slice of Data fieldTagName it need to validate request form fields names.
 // Return only Error level error.
 func (d *data) fieldTags() ([]string, error) {
@@ -119,8 +124,8 @@ func (d *data) fieldTags() ([]string, error) {
 	return tags, nil
 }
 
-// newData validate payload pointer to the struct and return *Data.
-// tagType is tag name example 'form' or 'json' it depends on what request format is being read.
+// newData validate payload pointer to the struct and return data.
+// tagType is tag name example 'form' or 'json' or 'json' it depends on what request format is being read.
 // Return only Error level error.
 func newData(payload any, tagType string) (*data, error) {
 	if payload == nil {
@@ -175,6 +180,7 @@ func (f *field) setField(payload string) error {
 }
 
 // newField set data structField value into field value.
+// Return only Error level error.
 func (d *data) newField(fieldNum int) (*field, error) {
 	field := &field{
 		typ:         d.typ.Field(fieldNum),
@@ -189,7 +195,6 @@ func (d *data) newField(fieldNum int) (*field, error) {
 	return field, nil
 }
 
-// todo add trimSpaces in tags and test it
 // getFieldTags get fieldTags by tag name 'form' or 'query'.
 // Return only Error level error.
 func (f *field) getFieldTags() (err error) {

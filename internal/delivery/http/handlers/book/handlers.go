@@ -21,6 +21,7 @@ type BookHandlers interface {
 	DeleteBook(w http.ResponseWriter, r *http.Request)
 	ReadBook(w http.ResponseWriter, r *http.Request)
 	DownloadBook(w http.ResponseWriter, r *http.Request)
+	JSONTest(w http.ResponseWriter, r *http.Request)
 }
 
 type bookHandlers struct {
