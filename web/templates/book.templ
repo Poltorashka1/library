@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-templ Book(book dtos.BookResponse) {
+templ Book(book *dtos.BookResponse) {
 	<main class="main">
 		<div class="container book-details">
 			<div class="book-details-image">

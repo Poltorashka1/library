@@ -1,0 +1,8 @@
+package templates
+
+templ InvalidInput(msg string, statusCode string) {
+	<div class="not-found-container">
+		<h1 class="not-found-title">{ statusCode }</h1>
+		<p class="not-found-text">Oops! { msg }.</p>
+	</div>
+}

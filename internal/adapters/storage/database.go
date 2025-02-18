@@ -40,10 +40,9 @@ func (q *Query) StringV2() string {
 }
 
 type db struct {
-	// todo mb ne nado
 	cfg       config.DBConfig
 	dbConnect *sql.DB
-	logger    logger.Logger
+	log       logger.Logger
 }
 
 func (db *db) ExecContext(ctx context.Context, query Query) (sql.Result, error) {
@@ -67,24 +66,24 @@ func NewQuery(queryName string, query string, args []any) Query {
 	}
 }
 
-func NewDB(ctx context.Context, logger logger.Logger, config config.DBConfig) DB {
+func NewDB(ctx context.Context, log logger.Logger, config config.DBConfig) DB {
 	connect, err := sql.Open("sqlite3", config.DSN())
 	if err != nil {
-		logger.Fatal("error connect to database")
+		log.Fatal("error connect to database")
 	}
 	storage := &db{
 		cfg:       config,
 		dbConnect: connect,
-		logger:    logger,
+		log:       log,
 	}
 
 	if err := storage.dbConnect.Ping(); err != nil {
-		logger.Fatal("error connect to database")
+		log.Fatal("error connect to database")
 	}
 
 	return storage
 }
 
 func (db *db) logQuery(query Query) {
-	db.logger.Debug(query.StringV1())
+	db.log.Debug(query.StringV1())
 }

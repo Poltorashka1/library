@@ -18,9 +18,9 @@ type repository struct {
 	authorrepo.AuthorRepository
 }
 
-func NewRepository(logger logger.Logger, db storage.DB, fs storage.FS) Repository {
+func NewRepository(log logger.Logger, db storage.DB, fs storage.FS) Repository {
 	return &repository{
-		bookrepo.NewBookRepository(logger, db, fs),
-		authorrepo.NewAuthorRepository(logger, db),
+		bookrepo.NewBookRepository(log, db, fs),
+		authorrepo.NewAuthorRepository(log, db),
 	}
 }

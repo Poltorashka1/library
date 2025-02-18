@@ -15,11 +15,12 @@ import (
 )
 
 // todo add несколько режимов работы библиотеки.
-// todo поменять местами ” и 'optional'
+// todo mb поменять местами '' и 'optional'
 // todo add payload validation?
 // todo обобщить ошибки
 // todo возможность ограничивать поле не по размеру, а по количеству символов
 
+// todo if field not file а приходит файл в поле.
 const (
 	pdf  = "application/pdf"
 	epub = "application/epub+zip"

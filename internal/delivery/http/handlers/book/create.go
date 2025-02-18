@@ -1,21 +1,43 @@
 package bookhandlers
 
 import (
+	"book/internal/config"
 	"book/internal/delivery/http/request"
 	"book/internal/delivery/http/response"
 	"book/internal/dtos"
+	"book/internal/logger"
+	"book/internal/usecase"
+	"book/internal/usecase/book"
 	"errors"
 	"fmt"
 	"net/http"
 )
 
-func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
+type CreateBookHandler interface {
+	ServeHTTP(http.ResponseWriter, *http.Request)
+}
+
+type createBookHandler struct {
+	log     logger.Logger
+	cfg     config.HandlersConfig
+	useCase bookusecase.CreateBookUseCase
+}
+
+func NewCreateBookHandler(log logger.Logger, cfg config.HandlersConfig, useCase *usecase.UseCase) CreateBookHandler {
+	return &createBookHandler{
+		log:     log,
+		cfg:     cfg,
+		useCase: useCase.CreateBookUseCase,
+	}
+}
+
+func (h *createBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	payload := &dtos.CreateBookRequest{}
 
 	// todo Request Entity Too Large
 	err := request.FormParse(r, payload)
 	if err != nil {
-		h.handleError(w, err)
+		h.handleFormParseError(w, err)
 		return
 	}
 
@@ -27,17 +49,17 @@ func (h *bookHandlers) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("%+v\n", payload)
 
-	result, err := h.useCase.CreateBook(r.Context(), payload)
+	result, err := h.useCase.Run(r.Context(), payload)
 	if err != nil {
 		response.ServerError(w)
-		h.logger.Error(err.Error())
+		h.log.Error(err.Error())
 		return
 	}
 	//os.Remove(payload.File.Name())
 	response.Success(w, result, h.cfg.JSON())
 }
 
-func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
+func (h *createBookHandler) handleFormParseError(w http.ResponseWriter, err error) {
 	var multiErr *request.MultiError
 	var fileNameErr *request.ErrFieldName
 	var fileType *request.ErrInvalidFileType
@@ -66,7 +88,7 @@ func (h *bookHandlers) handleError(w http.ResponseWriter, err error) {
 		response.Error(w, err, http.StatusUnprocessableEntity)
 		return
 	}
-	h.logger.Error(err.Error())
+	h.log.Error(err.Error())
 	response.ServerError(w)
 	return
 }

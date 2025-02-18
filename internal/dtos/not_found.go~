@@ -1,0 +1,5 @@
+package dtos
+
+type NotFound struct {
+	Message string `query:"message"`
+}

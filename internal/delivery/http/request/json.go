@@ -185,10 +185,10 @@ func (d *data) decodeJson(mErr *MultiError) error {
 		case `{`:
 			//inObject = true
 			// todo check buf[:-1] == `}`
-			if d.requestData.Json[len(d.requestData.Json)-1] != '}' {
-				return errors.New("invalid json syntax")
-			}
-			d.requestData.Json = strings.TrimSpace(d.requestData.Json[1 : len(d.requestData.Json)-1])
+			//if d.requestData.Json[len(d.requestData.Json)-1] != '}' {
+			//	return errors.New("invalid json syntax")
+			//}
+			//d.requestData.Json = strings.TrimSpace(d.requestData.Json[1 : len(d.requestData.Json)-1])
 			err := d.getObject(mErr)
 			if err != nil {
 				return err
@@ -233,10 +233,14 @@ func (d *data) getObject(mErr *MultiError) error {
 			if inString == true {
 				continue
 			}
+			expectComma = true
 			depth++
 		case "}", "]":
 			if inString == true {
 				continue
+			}
+			if expectComma == true {
+				return errors.New("invalid json syntax")
 			}
 			depth--
 		case "\"":
@@ -245,7 +249,8 @@ func (d *data) getObject(mErr *MultiError) error {
 			continue
 			// todo check in string
 		case ",":
-			if depth == 0 && !inString {
+			expectComma = false
+			if depth == 1 && !inString {
 				//d.requestData.Json = d.requestData.Json[i+1:]
 				err := d.setFieldJSON(strings.TrimSpace(d.requestData.Json[start:i+1]), mErr)
 				if err != nil {

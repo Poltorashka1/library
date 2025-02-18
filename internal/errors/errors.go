@@ -9,6 +9,7 @@ var ErrTooShort = errors.New("parameter must be at least 1 character long")
 var ErrFormatLength = errors.New("parameter must be at least 1 character long")
 var ErrBookNotFound = errors.New("book not found")
 var ErrBookNotExist = errors.New("book not exist")
+var ErrInvalidBookID = errors.New("invalid book id")
 
 var ErrServerError = errors.New("server error")
 

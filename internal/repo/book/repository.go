@@ -15,11 +15,11 @@ type BookRepository interface {
 }
 
 type bookRepository struct {
-	db     storage.DB
-	fs     storage.FS
-	logger logger.Logger
+	log logger.Logger
+	db  storage.DB
+	fs  storage.FS
 }
 
-func NewBookRepository(logger logger.Logger, db storage.DB, fs storage.FS) BookRepository {
-	return &bookRepository{db: db, logger: logger, fs: fs}
+func NewBookRepository(log logger.Logger, db storage.DB, fs storage.FS) BookRepository {
+	return &bookRepository{log: log, db: db, fs: fs}
 }

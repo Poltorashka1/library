@@ -11,9 +11,11 @@ type Author struct {
 	Patronymic *string
 }
 
-type Authors struct {
-	Authors []Author
-}
+type Authors []Author
+
+//type Authors struct {
+//	Authors []Author
+//}
 
 //type Authors struct {
 //	Authors []Author `json:"authors"`

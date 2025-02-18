@@ -3,25 +3,42 @@ package usecase
 import (
 	"book/internal/logger"
 	"book/internal/repo"
-	"book/internal/usecase/author"
+	authorusecase "book/internal/usecase/author"
 	"book/internal/usecase/book"
 )
 
 //go:generate mockery --name=UseCase
 
-type UseCase interface {
-	bookusecase.BookUseCase
-	authorusecase.AuthorUseCase
+type UseCase struct {
+	*BookUseCase
+	*AuthorUseCase
 }
 
-type useCase struct {
-	bookusecase.BookUseCase
-	authorusecase.AuthorUseCase
+func NewUseCase(log logger.Logger, repo repo.Repository) *UseCase {
+	return &UseCase{NewBookUseCase(log, repo),
+		NewAuthorUseCase(log, repo)}
 }
 
-func NewUseCase(logger logger.Logger, repo repo.Repository) UseCase {
-	return &useCase{
-		bookusecase.NewBookUseCase(logger, repo),
-		authorusecase.NewAuthorUseCase(logger, repo),
+type BookUseCase struct {
+	bookusecase.CreateBookUseCase
+	bookusecase.GetBookUseCase
+	bookusecase.GetBooksUseCase
+}
+
+func NewBookUseCase(log logger.Logger, repo repo.Repository) *BookUseCase {
+	return &BookUseCase{
+		bookusecase.NewCreateBookUseCase(log, repo),
+		bookusecase.NewGetBookUseCase(log, repo),
+		bookusecase.NewGetBooksUseCase(log, repo),
+	}
+}
+
+type AuthorUseCase struct {
+	authorusecase.GetAuthorUseCase
+}
+
+func NewAuthorUseCase(log logger.Logger, repo repo.Repository) *AuthorUseCase {
+	return &AuthorUseCase{
+		authorusecase.NewGetAuthorUseCase(log, repo),
 	}
 }

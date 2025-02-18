@@ -1,54 +1,45 @@
 package bookhandlers
 
-import (
-	"book/internal/delivery/http/request"
-	"book/internal/delivery/http/response"
-	"book/internal/dtos"
-	apperrors "book/internal/errors"
-	"errors"
-	"net/http"
-)
-
 // todo add validation query params
 
-func (h *bookHandlers) ReadBook(w http.ResponseWriter, r *http.Request) {
-	// todo add other file format
-	//parts := strings.Split(r.URL.Path, "/")
-	//
-	//bookUUID := parts[2]
-	//var bookChapter string
-	//if len(parts) == 3 {
-	//	bookChapter = "1"
-	//} else {
-	//	bookChapter = parts[2]
-	//}
-
-	bookUUID := request.URLParse(r, "uuid")
-	bookChapter := request.URLParse(r, "chapter")
-	if bookChapter == "" {
-		bookChapter = "1"
-	}
-
-	var payload = dtos.BookFileRequest{
-		FileName: bookUUID,
-		FileType: h.cfg.FormatHTML(),
-		Chapter:  bookChapter,
-	}
-
-	result, err := h.useCase.BookFile(r.Context(), payload)
-	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrBookNotExist):
-			response.Error(w, err, http.StatusNotFound)
-			//response.Redirect(w, r, h.cfg.NotFoundURL())
-		default:
-			response.Error(w, err, http.StatusInternalServerError)
-		}
-		return
-	}
-
-	response.Success(w, result.File, h.cfg.HTML())
-}
+//func (h *bookHandlers) ReadBook(w http.ResponseWriter, r *http.Request) {
+//	// todo add other file format
+//	//parts := strings.Split(r.URL.Path, "/")
+//	//
+//	//bookUUID := parts[2]
+//	//var bookChapter string
+//	//if len(parts) == 3 {
+//	//	bookChapter = "1"
+//	//} else {
+//	//	bookChapter = parts[2]
+//	//}
+//
+//	bookUUID := request.URLParse(r, "uuid")
+//	bookChapter := request.URLParse(r, "chapter")
+//	if bookChapter == "" {
+//		bookChapter = "1"
+//	}
+//
+//	var payload = dtos.BookFileRequest{
+//		FileName: bookUUID,
+//		FileType: h.cfg.FormatHTML(),
+//		Chapter:  bookChapter,
+//	}
+//
+//	result, err := h.useCase.BookFile(r.Context(), payload)
+//	if err != nil {
+//		switch {
+//		case errors.Is(err, apperrors.ErrBookNotExist):
+//			response.Error(w, err, http.StatusNotFound)
+//			//response.Redirect(w, r, h.cfg.NotFoundURL())
+//		default:
+//			response.Error(w, err, http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//
+//	response.Success(w, result.File, h.cfg.HTML())
+//}
 
 //func getChapter(fileName string) (string, []byte, error) {
 //	z, err := zip.OpenReader(fileName)

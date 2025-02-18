@@ -93,7 +93,8 @@ func (f files) Add(fileName string, file *os.File) {
 	f[fileName] = append(f[fileName], file)
 }
 
-// todo optimize add method in payload struct to get all field name
+// todo mb optimize add method in payload struct to get all field name
+// todo mb map[string]string with field name and default/file type value
 // fieldTags returns a slice of Data fieldTagName it need to validate request form fields names.
 // Return only Error level error.
 func (d *data) fieldTags() ([]string, error) {

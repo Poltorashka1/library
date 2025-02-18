@@ -22,9 +22,9 @@ type provider struct {
 
 	router api.Router
 
-	handlers handlers.Handlers
+	handlers *handlers.Handlers
 
-	useCase usecase.UseCase
+	useCase *usecase.UseCase
 
 	repository repo.Repository
 
@@ -39,7 +39,7 @@ func NewProvider() *provider {
 func (p *provider) Logger() logger.Logger {
 	if p.logger == nil {
 		p.logger = logger.Load()
-		p.Logger().Info("Logger loaded")
+		p.logger.Info("Logger loaded")
 	}
 
 	return p.logger
@@ -81,16 +81,16 @@ func (p *provider) DBConfig() config.DBConfig {
 	return p.dbConfig
 }
 
-func (p *provider) Handlers(ctx context.Context) handlers.Handlers {
+func (p *provider) Handlers(ctx context.Context) *handlers.Handlers {
 	if p.handlers == nil {
-		p.handlers = handlers.NewHandlers(p.Logger(), p.UseCase(ctx), p.HandlersConfig())
+		p.handlers = handlers.NewHandlers(p.Logger(), p.HandlersConfig(), p.UseCase(ctx))
 		p.Logger().Info("Handlers loaded")
 	}
 
 	return p.handlers
 }
 
-func (p *provider) UseCase(ctx context.Context) usecase.UseCase {
+func (p *provider) UseCase(ctx context.Context) *usecase.UseCase {
 	if p.useCase == nil {
 		p.useCase = usecase.NewUseCase(p.Logger(), p.Repository(ctx))
 		p.Logger().Info("UseCase loaded")

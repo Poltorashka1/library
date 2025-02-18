@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"book/internal/config"
-	"book/internal/delivery/http/handlers/author"
+	authorhandlers "book/internal/delivery/http/handlers/author"
 	"book/internal/delivery/http/handlers/book"
 	"book/internal/delivery/http/response"
 	"book/internal/logger"
@@ -13,21 +13,20 @@ import (
 
 // todo add logger middleware
 
-type Handlers interface {
-	bookhandlers.BookHandlers
-	authorhandlers.AuthorHandlers
-	NotFound(w http.ResponseWriter, r *http.Request)
+//type Handlers interface {
+//	bookhandlers.BookHandlers
+//	authorhandlers.AuthorHandlers
+//	NotFound(w http.ResponseWriter, r *http.Request)
+//}
+
+type Handlers struct {
+	cfg config.HandlersConfig
+	*BookHandlers
+	*AuthorHandlers
 }
 
-type handlers struct {
-	config.HandlersConfig
-	bookhandlers.BookHandlers
-	authorhandlers.AuthorHandlers
-}
-
-func (h *handlers) NotFound(w http.ResponseWriter, r *http.Request) {
-	nFTempl := templates.NotFound("")
-	temlp := templates.Layout(nFTempl, "NotFound")
+func (h *Handlers) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
+	temlp := templates.Layout(templates.NotFound(""), "NotFound")
 	err := temlp.Render(r.Context(), w)
 	if err != nil {
 		response.Error(w, err, http.StatusInternalServerError)
@@ -35,10 +34,37 @@ func (h *handlers) NotFound(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewHandlers(logger logger.Logger, useCase usecase.UseCase, config config.HandlersConfig) Handlers {
-	return &handlers{
-		config,
-		bookhandlers.NewBookHandlers(logger, useCase, config),
-		authorhandlers.NewAuthorHandlers(logger, useCase, config),
+func NewHandlers(log logger.Logger, cfg config.HandlersConfig, useCase *usecase.UseCase) *Handlers {
+	return &Handlers{
+		cfg,
+		NewBookHandlers(log, cfg, useCase),
+		NewAuthorHandlers(log, cfg, useCase),
+	}
+}
+
+type BookHandlers struct {
+	bookhandlers.GetBookHandler
+	bookhandlers.CreateBookHandler
+	bookhandlers.GetBooksHandler
+
+	//ReadBook(w http.ResponseWriter, r *http.Request)
+	//DownloadBook(w http.ResponseWriter, r *http.Request)
+}
+
+func NewBookHandlers(log logger.Logger, cfg config.HandlersConfig, useCase *usecase.UseCase) *BookHandlers {
+	return &BookHandlers{
+		bookhandlers.NewGetBookHandler(log, cfg, useCase),
+		bookhandlers.NewCreateBookHandler(log, cfg, useCase),
+		bookhandlers.NewGetBooksHandler(log, cfg, useCase),
+	}
+}
+
+type AuthorHandlers struct {
+	authorhandlers.GetAuthorHandler
+}
+
+func NewAuthorHandlers(log logger.Logger, cfg config.HandlersConfig, useCase *usecase.UseCase) *AuthorHandlers {
+	return &AuthorHandlers{
+		authorhandlers.NewGetAuthorHandler(log, cfg, useCase),
 	}
 }

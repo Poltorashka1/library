@@ -35,7 +35,7 @@ func (r *bookRepository) BookAuthors(ctx context.Context, id int) (*entities.Aut
 		if err != nil {
 			return nil, err
 		}
-		bookAuthors.Authors = append(bookAuthors.Authors, author)
+		bookAuthors = append(bookAuthors, author)
 	}
 	return &bookAuthors, nil
 
