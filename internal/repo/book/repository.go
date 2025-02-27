@@ -8,9 +8,11 @@ import (
 )
 
 type BookRepository interface {
-	Book(ctx context.Context, uuid string) (*entities.Book, error)
-	Books(ctx context.Context, payload entities.BookFilter) (*entities.Books, error)
-	BookFile(ctx context.Context, payload entities.BookFileFilter) (*entities.BookFile, error)
+	BookV3(ctx context.Context, uuid string) (*entities.Book, error)
+	Books(ctx context.Context, payload *entities.BooksFilter) (*entities.Books, error)
+
+	BooksCount(ctx context.Context) (int, error)
+	BookFile(ctx context.Context, payload *entities.BookFileFilter) (*entities.BookFile, error)
 	//BookAuthors(ctx context.Context, id int) (*entities.Authors, error)
 }
 

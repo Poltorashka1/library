@@ -71,6 +71,7 @@ func (h *getBooksHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response.Redirect(w, r, NewPath(r, "page", strconv.Itoa(h.cfg.DefaultBooksPageNumber())))
 			return
 		}
+
 		h.log.Error(err.Error())
 		response.ServerError(w)
 		return

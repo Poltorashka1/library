@@ -34,6 +34,7 @@ func NewGetBookHandler(log logger.Logger, cfg config.HandlersConfig, useCase *us
 
 func (h *getBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	uuid := request.URLParse(r, "uuid")
+
 	err := h.uuidValidate(uuid)
 	if errors.Is(err, apperrors.ErrInvalidBookID) {
 		response.InvalidInput(w, "Invalid book id", http.StatusUnprocessableEntity)
@@ -47,6 +48,7 @@ func (h *getBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			response.NotFound(w, "Book not found")
 			return
 		}
+		h.log.Error(err.Error())
 		response.ServerError(w)
 		return
 	}
@@ -69,7 +71,7 @@ func (h *getBookHandler) uuidValidate(uuid string) error {
 				return apperrors.ErrInvalidBookID
 			}
 		} else {
-			if !((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f') || (char >= 'A' && char <= 'F')) {
+			if !(char >= '0' && char <= '9') && !(char >= 'a' && char <= 'f') && !(char >= 'A' && char <= 'F') {
 				return apperrors.ErrInvalidBookID
 			}
 		}

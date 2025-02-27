@@ -158,8 +158,8 @@ func (r *bookRepository) BookV3(ctx context.Context, uuid string) (*entities.Boo
 	  			 GROUP_CONCAT(t3.nickname, ', ') AS authors,
        				GROUP_CONCAT(t3.uuid, ', ')     AS authors_uuid
 			from books as t1
-	    		left join book_author as t2 on t2.book_id = t1.id
-	    		left join authors as t3 on t2.author_id = t3.id
+	    		join book_author as t2 on t2.book_id = t1.id
+	    		join authors as t3 on t2.author_id = t3.id
 			WHERE t1.uuid = $1
 GROUP BY t1.id;`,
 		Args: []any{uuid},

@@ -19,7 +19,7 @@ templ Books(books *dtos.BooksResponse, page int, limit int) {
 							<strong>Authors:</strong>
 							for _, a := range b.Authors.Authors {
 								if a.UUID == "" {
-									<p class="author">{ a.NickName }</p>
+									<a href="" class="author">{ a.NickName }</a>
 									<br/>
 								} else {
 									<a href={ templ.URL("/author/" + a.UUID) } class="author">{ a.NickName }</a>

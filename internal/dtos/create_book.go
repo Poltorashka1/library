@@ -46,7 +46,7 @@ func (r *CreateBookRequest) Validate() error {
 	//r.descriptionValidate(e)
 	//r.publisherValidate(e)
 
-	if e.Errors != nil {
+	if e != nil {
 		return e
 	}
 	return nil
@@ -76,7 +76,7 @@ func optimizeString(s string) string {
 
 func (r *CreateBookRequest) isbnValidate(e *apperrors.ValidationErrors) {
 	if r.BookInfo.ISBN == "" {
-		e.Errors = append(e.Errors, errors.New("empty field ISBN; "))
+		*e = append(*e, errors.New("empty field ISBN; "))
 		return
 	}
 
@@ -86,7 +86,7 @@ func (r *CreateBookRequest) isbnValidate(e *apperrors.ValidationErrors) {
 
 func (r *CreateBookRequest) publicationYearValidate(e *apperrors.ValidationErrors) {
 	if r.BookInfo.PublicationYear <= 0 {
-		e.Errors = append(e.Errors, errors.New("publication year must be greater than 0; "))
+		*e = append(*e, errors.New("publication year must be greater than 0; "))
 		return
 	}
 

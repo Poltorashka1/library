@@ -52,11 +52,11 @@ func (db *db) ExecContext(ctx context.Context, query Query) (sql.Result, error) 
 	return db.dbConnect.ExecContext(ctx, query.Query, query.Args...)
 }
 func (db *db) QueryContext(ctx context.Context, query Query) (*sql.Rows, error) {
-	db.logQuery(query)
+	//db.logQuery(query)
 	return db.dbConnect.QueryContext(ctx, query.Query, query.Args...)
 }
 func (db *db) QueryRowContext(ctx context.Context, query Query) *sql.Row {
-	db.logQuery(query)
+	//db.logQuery(query)
 	return db.dbConnect.QueryRowContext(ctx, query.Query, query.Args...)
 }
 

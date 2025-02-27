@@ -23,7 +23,7 @@ func NewGetBookUseCase(log logger.Logger, repo repo.Repository) GetBookUseCase {
 }
 
 func (u *getBookUseCase) Run(ctx context.Context, uuid string) (*dtos.BookResponse, error) {
-	result, err := u.repo.BookV3(ctx, uuid)
+	result, err := u.repo.BookV2(ctx, uuid)
 	if err != nil {
 		return nil, err
 	}

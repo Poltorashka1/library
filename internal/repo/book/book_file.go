@@ -6,7 +6,7 @@ import (
 )
 
 // todo optimize []byte
-func (r *bookRepository) BookFile(ctx context.Context, payload entities.BookFileFilter) (*entities.BookFile, error) {
+func (r *bookRepository) BookFile(ctx context.Context, payload *entities.BookFileFilter) (*entities.BookFile, error) {
 	file, err := r.fs.GET(ctx, payload.FileName, payload.FileType, payload.Chapter)
 	if err != nil {
 		return nil, err

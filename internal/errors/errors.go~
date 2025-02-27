@@ -56,7 +56,7 @@ func (e ValidationErrors) Error() string {
 		err.WriteString(e.Error())
 	}
 
-	return err.String()
+	return err
 }
 
 //type validationError struct {

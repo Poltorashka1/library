@@ -44,7 +44,7 @@ func (u *getBooksUseCase) Run(ctx context.Context, payload *dtos.BooksRequest) (
 
 	filter.BooksCount = filter.Stop - filter.Start
 
-	result, err := u.repo.Books(ctx, filter)
+	result, err := u.repo.BooksV2(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

@@ -145,7 +145,7 @@ func (r *bookRepository) BooksV2(ctx context.Context, filter *entities.BooksFilt
 		if err != nil {
 			return nil, err
 		}
-		// todo что если два невалидный автора, тогда "No information" запишется дважды
+
 		if !author.UUID.Valid || !author.NickName.Valid {
 			author.NickName.String = "No information"
 		}

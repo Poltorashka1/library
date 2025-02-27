@@ -8,8 +8,8 @@ type Author struct {
 	ID         int
 	UUID       string
 	NickName   string
-	Name       sql.NullString
-	Surname    sql.NullString
+	Name       string
+	Surname    string
 	Patronymic sql.NullString
 }
 

@@ -1,7 +1,7 @@
 package request
 
 import (
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
