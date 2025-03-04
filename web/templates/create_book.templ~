@@ -1,0 +1,134 @@
+package templates
+
+templ CreateBook() {
+	<main class="main">
+		<div class="container">
+			<h1 class="main-title">Создание новой книги</h1>
+			<form class="book-form">
+				<!-- Поле ISBN -->
+				<div class="form-group">
+					<label for="isbn">ISBN</label>
+					<input type="text" id="isbn" name="isbn"/>
+				</div>
+				<!-- Поле Название -->
+				<div class="form-group">
+					<label for="title">Название</label>
+					<input type="text" id="title" name="title"/>
+				</div>
+				<!-- Поле Год публикации -->
+				<div class="form-group">
+					<label for="publication-year">Год публикации</label>
+					<input type="number" id="publication-year" name="publication-year"/>
+				</div>
+				<!-- Поле Описание -->
+				<div class="form-group">
+					<label for="description">Описание</label>
+					<textarea id="description" name="description" rows="5"></textarea>
+				</div>
+				<!-- Поле Файл -->
+				<div class="form-group">
+					<label for="file">Файл книги</label>
+					<input type="file" id="file" name="file" accept=".pdf,.epub,.doc,.docx"/>
+				</div>
+				<!-- Поле Авторы -->
+				<div class="form-group">
+					<label>Авторы</label>
+					<div id="authors-list">
+						<div class="author-input">
+							<input type="text" name="author[]" placeholder="Имя автора"/>
+							<button type="button" class="remove-author">Удалить</button>
+						</div>
+					</div>
+					<button type="button" id="add-author" class="add-author-button">Добавить автора</button>
+				</div>
+				<!-- Кнопка отправки формы -->
+				<div class="form-group">
+					<button type="submit" class="submit-button">Создать книгу</button>
+				</div>
+
+				<div id="form-message" class="form-message"></div>
+			</form>
+		</div>
+		<script>
+            // Функция для добавления нового автора
+            function addAuthor() {
+                const authorsList = document.getElementById('authors-list');
+                const newAuthorInput = document.createElement('div');
+                newAuthorInput.classList.add('author-input');
+                newAuthorInput.innerHTML = `
+                    <input type="text" name="author[]" placeholder="Имя автора" required>
+                    <button type="button" class="remove-author">Удалить</button>
+                `;
+                authorsList.appendChild(newAuthorInput);
+
+                // Добавляем обработчик для кнопки удаления
+                newAuthorInput.querySelector('.remove-author').addEventListener('click', function () {
+                    authorsList.removeChild(newAuthorInput);
+                });
+            }
+
+            // Функция для отображения сообщений
+            function showMessage(message, type) {
+                const messageDiv = document.getElementById('form-message');
+                messageDiv.textContent = message;
+                messageDiv.className = `form-message ${type}`;
+
+                // Скрываем сообщение через 5 секунд
+                setTimeout(() => {
+                    messageDiv.textContent = '';
+                    messageDiv.className = 'form-message';
+                }, 5000);
+            }
+
+            // Обработчик отправки формы
+            document.getElementById('book-form').addEventListener('submit', async function (event) {
+                event.preventDefault(); // Предотвращаем стандартную отправку формы
+
+                const form = event.target;
+                const formData = new FormData(form); // Собираем данные формы
+
+                // Добавляем авторов в FormData
+                const authors = document.querySelectorAll('input[name="author[]"]');
+                authors.forEach((author, index) => {
+                    formData.append(`authors[${index}]`, author.value);
+                });
+
+                try {
+                    // Отправляем POST-запрос на сервер
+                    const response = await fetch('/add/', {
+                        method: 'POST',
+                        body: formData, // Отправляем FormData
+                    });
+
+                    // Обрабатываем ответ сервера
+                    if (!response.ok) {
+                        const errorData = await response.json(); // Предполагаем, что сервер возвращает JSON с ошибкой
+                        throw new Error(errorData.message || 'Ошибка при отправке формы');
+                    }
+
+                    const result = await response.json();
+
+                    // Показываем сообщение об успехе
+                    showMessage('Книга успешно создана!', 'success');
+
+                    // Очищаем форму
+                    form.reset();
+                    document.getElementById('authors-list').innerHTML = ''; // Очищаем список авторов
+                    addAuthor(); // Добавляем одного автора по умолчанию
+                } catch (error) {
+                    // Показываем сообщение об ошибке
+                    showMessage(error.message || 'Ошибка при создании книги. Пожалуйста, попробуйте снова.', 'error');
+                    console.error('Ошибка:', error);
+                }
+            });
+
+            // Обработчик для кнопки добавления автора
+            document.getElementById('add-author').addEventListener('click', addAuthor);
+
+            // Добавляем одного автора по умолчанию при загрузке страницы
+            document.addEventListener('DOMContentLoaded', function () {
+                addAuthor();
+            });
+        </script>
+	</main>
+}

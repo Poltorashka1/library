@@ -13,21 +13,31 @@ import (
 // todo test form parsing с использованием встраивания
 
 type CreateBookRequest struct {
-	BookInfo BookInfo `json:"book_info" form:"book_info"`
-	Files    Files    `json:"files" form:"files"`
-	File     File     `json:"file" form:"file"`
+	BookInfo BookInfo `json:"book_info"`
+	Files    Files    `json:"files"`
+	File     File     `json:"file"`
+	Digits   []int    `json:"digits" form:"digits"`
+	Authors  Authors  `json:"authors" form:"authors"`
+}
+
+type Authors []Author
+
+type Author struct {
+	NickName string `json:"nick_name" form:"nick_name,required"`
+	Name     string `json:"name" form:"name,optional"`
+	Surname  string `json:"surname" form:"surname,optional"`
 }
 
 type Files struct {
-	Files []*os.File `form:"files,required"`
+	Files []*os.File `form:"files"`
 }
 type File struct {
-	File *os.File `form:"file,required"`
+	File *os.File `form:"file"`
 }
 
 type BookInfo struct {
 	Title           string `json:"title" form:"title,required"`
-	ISBN            string `json:"isbn" form:"isbn,required"`
+	ISBN            string `form:"isbn,required"`
 	PublicationYear int    `json:"publication_year,required" form:"publication_year,optional"`
 	Description     string `json:"description" form:"description,"`
 	Publisher       string `json:"publisher" form:"publisher,required"`

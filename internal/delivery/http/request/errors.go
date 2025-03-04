@@ -69,7 +69,7 @@ type ErrFieldName struct {
 }
 
 func (e *ErrFieldName) Error() string {
-	return fmt.Sprintf("invalid field name '%s'", e.fieldName)
+	return fmt.Sprintf("invalid field '%s'", e.fieldName)
 }
 
 //func (e *ErrFieldName) UnprocessableEntity() {}

@@ -157,7 +157,7 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 
 	defer func() {
 		if err != nil {
-			parser.data.requestData.Files.RemoveFiles()
+			result.Files.RemoveFiles()
 		}
 	}()
 
@@ -184,17 +184,18 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 				return err
 			}
 			if key != "" {
-				parser.data.requestData.Values.Add(key, value)
+				result.Values.Add(key, value)
 			}
 		} else { // parse file
 			fileName, file, err := parser.parseFormFile(part)
 			if err != nil {
 				return err
 			}
-			parser.data.requestData.Files.Add(fileName, file)
+			result.Files.Add(fileName, file)
 		}
 	}
 
+	parser.data.requestData = result
 	return nil
 }
 

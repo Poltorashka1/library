@@ -39,10 +39,12 @@ func (r *router) initRoutes(handlers *handlers.Handlers) {
 	r.mux.NotFound(handlers.NotFoundHandler)
 	//r.MethodFunc("GET", "/notFound", handlers.NotFound)
 
-	r.MethodFunc("GET", "/book/{uuid}", handlers.GetBookHandler.ServeHTTP)
-	r.MethodFunc("GET", "/books/", handlers.GetBooksHandler.ServeHTTP)
+	r.MethodFunc(http.MethodGet, "/book/{uuid}", handlers.GetBookHandler.ServeHTTP)
+	r.MethodFunc(http.MethodGet, "/books/", handlers.GetBooksHandler.ServeHTTP)
 
-	r.MethodFunc("POST", "/add/", handlers.CreateBookHandler.ServeHTTP)
+	r.MethodFunc(http.MethodPost, "/add/", handlers.CreateBookHandler.ServeHTTP)
+	r.MethodFunc(http.MethodGet, "/add/", handlers.CreateBookHandler.ServeHTTP)
+
 	//r.MethodFunc("PUT", "/books", handlers.UpdateBook)
 	//r.MethodFunc("DELETE", "/books/{title}", handlers.DeleteBook)
 

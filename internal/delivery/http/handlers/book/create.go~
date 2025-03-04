@@ -35,7 +35,6 @@ func NewCreateBookHandler(log logger.Logger, cfg config.HandlersConfig, useCase 
 func (h *createBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		h.GET(w, r)
-		return
 	}
 
 	payload := &dtos.CreateBookRequest{}

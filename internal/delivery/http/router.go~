@@ -2,7 +2,7 @@ package api
 
 import (
 	"book/internal/delivery/http/handlers"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 

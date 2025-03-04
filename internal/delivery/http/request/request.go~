@@ -38,7 +38,7 @@ type requestData struct {
 	Json   string
 	Values url.Values
 	Files  files
-	Array  map[int]any
+	Array  map[string]any
 }
 
 // files is a map of file names to a slice of os.File
