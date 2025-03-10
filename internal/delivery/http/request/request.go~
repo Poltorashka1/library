@@ -38,7 +38,7 @@ type requestData struct {
 	Json   string
 	Values url.Values
 	Files  files
-	Array  map[string]any
+	Array  map[int]map[string]string
 }
 
 // files is a map of file names to a slice of os.File
@@ -243,7 +243,6 @@ func (d *data) setDataValue(mErr *MultiError) error {
 		return errors.New("request: setDataValue: httpData cannot be nil")
 	}
 
-	fmt.Println(d.requestData.Values)
 	for fieldNum := range d.typ.NumField() {
 		field, err := d.newField(fieldNum)
 		//fmt.Println(field.typ.Type.Kind() == reflect.Slice)
@@ -356,16 +355,21 @@ func (f *field) setDefaultValue(mErr *MultiError) error {
 }
 
 func (f *field) setArrayValue(mErr *MultiError) {
+	fmt.Println(f.requestData.Array)
+
 	if f.typ.Type.Elem().Kind() == reflect.Struct {
 		val := reflect.New(f.typ.Type.Elem())
 		if val.Kind() == reflect.Pointer {
 			val = val.Elem()
 		}
+
 		typ := val.Type()
+		for k, v := range f.requestData.Array {
+
+		}
 		for idx := range typ.NumField() {
-			fmt.Println(f.tags.Name + "[" + strconv.Itoa(idx) + "]" + "[" + typ.Field(idx).Name + "]")
-			res := f.requestData.Values.Get(f.tags.Name + "[" + strconv.Itoa(idx) + "]" + "[" + typ.Field(idx).Name + "]")
-			fmt.Println(res)
+			field := typ.Field(idx)
+			fmt.Println(field)
 		}
 	} else {
 

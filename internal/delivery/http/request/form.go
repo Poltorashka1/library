@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -153,6 +154,7 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 	parser.data.requestData = &requestData{
 		Values: make(url.Values),
 		Files:  make(files),
+		Array:  make(map[int]map[string]string),
 	}
 
 	defer func() {
@@ -161,7 +163,6 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 		}
 	}()
 
-	// todo add custom reader
 	reader, err := r.MultipartReader()
 	if err != nil {
 		return err
@@ -176,42 +177,36 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 			return err
 		}
 
-		// parse value
 		if part.FileName() == "" {
-			key, value, err := parser.parseFormValue(part)
+			err := parser.parseFormValue(part)
 			if err != nil {
 				//result.Files.RemoveFiles()
 				return err
 			}
-			if key != "" {
-				parser.data.requestData.Values.Add(key, value)
-			}
 		} else { // parse file
-			fileName, file, err := parser.parseFormFile(part)
+			err := parser.parseFormFile(part)
 			if err != nil {
 				return err
 			}
-			parser.data.requestData.Files.Add(fileName, file)
 		}
 	}
-
 	return nil
 }
 
 // parseFormValue reads multipart.Part and returns formFieldName and formFieldValue.
 // Return error - ErrFieldName, ErrContentToLarge, ErrFormValueToLarge.
-func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName string, formFieldValue string, err error) {
-	key := part.FormName()
+func (parser *formParser) parseFormValue(part *multipart.Part) error {
+	tagKey := part.FormName()
 
-	if strings.HasSuffix(key, "]") {
-		idx := strings.Index(key, "[")
+	if strings.HasSuffix(tagKey, "]") {
+		idx := strings.Index(tagKey, "[")
 		if idx == -1 {
-			return "", "", &ErrFieldName{fieldName: part.FormName()}
+			return &ErrFieldName{fieldName: part.FormName()}
 		}
-		key = key[:idx]
+		tagKey = tagKey[:idx]
 	}
-	if !parser.HasField(key) {
-		return "", "", &ErrFieldName{fieldName: part.FormName()}
+	if !parser.HasField(tagKey) {
+		return &ErrFieldName{fieldName: part.FormName()}
 	}
 
 	var result bytes.Buffer
@@ -226,20 +221,20 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 		if readErr != nil && readErr != io.EOF {
 			var maxBytesError *http.MaxBytesError
 			if errors.As(readErr, &maxBytesError) {
-				return "", "", &ErrContentToLarge{limit: parser.cfg.maxBodySize}
+				return &ErrContentToLarge{limit: parser.cfg.maxBodySize}
 			}
-			return "", "", fmt.Errorf("request: readFile: failed to read part: %w", readErr)
+			return fmt.Errorf("request: readFile: failed to read part: %w", readErr)
 		}
 		if n > 0 {
 			if parser.cfg.maxFormValueSize > 0 {
 				readSize += n
 				if readSize > parser.cfg.maxFormValueSize {
-					return "", "", &ErrFormValueToLarge{formField: part.FormName(), limit: parser.cfg.maxFormValueSize}
+					return &ErrFormValueToLarge{formField: part.FormName(), limit: parser.cfg.maxFormValueSize}
 				}
 			}
 			_, writeErr := result.Write(buf[:n])
 			if writeErr != nil {
-				return "", "", fmt.Errorf("request: parseFormValue: failed to write to buffer: %w", writeErr)
+				return fmt.Errorf("request: parseFormValue: failed to write to buffer: %w", writeErr)
 			}
 		}
 
@@ -247,10 +242,53 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 			break
 		}
 	}
+
+	// todo test
 	if result.Len() <= 0 {
-		return "", "", nil
+		return errors.New("empty filed")
 	}
-	return part.FormName(), result.String(), nil
+
+	// todo add new func there
+	if tagKey != part.FormName() {
+		res := strings.Builder{}
+
+		depth := 0
+		index := -1
+		for _, v := range part.FormName()[len(tagKey):] {
+			switch v {
+			case '[':
+				depth++
+			case ']':
+				if depth == 0 {
+					return &ErrFieldName{fieldName: part.FormName()}
+				}
+				depth--
+				if index == -1 {
+					newIndex, err := strconv.Atoi(res.String())
+					if err != nil {
+						return &ErrFieldName{fieldName: part.FormName()}
+					}
+					if _, ok := parser.data.requestData.Array[newIndex]; !ok {
+						parser.data.requestData.Array[newIndex] = make(map[string]string)
+					}
+
+					res.Reset()
+					index = newIndex
+					continue
+				}
+				parser.data.requestData.Array[index][res.String()] = result.String()
+			default:
+				if depth <= 0 {
+					return &ErrFieldName{fieldName: part.FormName()}
+				}
+				res.WriteRune(v)
+			}
+		}
+		return nil
+	}
+
+	parser.data.requestData.Values.Add(part.FormName(), result.String())
+	return nil
 }
 
 // todo if content-type != file type
@@ -262,19 +300,19 @@ func (parser *formParser) parseFormValue(part *multipart.Part) (formFieldName st
 // - ErrContentToLarge
 // - ErrFormValueToLarge
 // Log file remove error.
-func (parser *formParser) parseFormFile(part *multipart.Part) (fileName string, file *os.File, err error) {
+func (parser *formParser) parseFormFile(part *multipart.Part) (err error) {
 	if !parser.HasField(part.FormName()) {
-		return "", nil, &ErrFieldName{fieldName: part.FormName()}
+		return &ErrFieldName{fieldName: part.FormName()}
 	}
 
 	err = parser.validateFilePart(part)
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 
 	tempFile, err := os.CreateTemp("", "upload-*_"+part.FileName())
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 
 	defer func() {
@@ -295,10 +333,11 @@ func (parser *formParser) parseFormFile(part *multipart.Part) (fileName string, 
 
 	err = parser.readFile(part, tempFile)
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 
-	return strings.ToLower(part.FormName()), tempFile, nil
+	parser.data.requestData.Files.Add(strings.ToLower(part.FormName()), tempFile)
+	return nil
 }
 
 // validateFilePart validate multipart.Part - content type, form name, file name
