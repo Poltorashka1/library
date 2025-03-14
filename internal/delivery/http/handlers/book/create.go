@@ -47,11 +47,11 @@ func (h *createBookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//err = payload.Validate()
-	//if err != nil {
-	//	response.Error(w, err, http.StatusUnprocessableEntity)
-	//	return
-	//}
+	err = payload.Validate()
+	if err != nil {
+		response.Error(w, err, http.StatusUnprocessableEntity)
+		return
+	}
 
 	fmt.Printf("%+v\n", payload)
 

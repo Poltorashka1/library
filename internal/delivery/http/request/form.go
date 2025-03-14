@@ -106,14 +106,14 @@ func FormParse(r *http.Request, payload any) error {
 	var mErr = &MultiError{}
 	defer func() {
 		if err != nil || mErr.err != nil {
-			d.requestData.Files.RemoveFiles()
+			d.request.Files.RemoveFiles()
 		}
 	}()
 
 	//tags = nil
 	//parser = nil
 
-	err = d.setDataValue(mErr)
+	err = d.setValue(mErr)
 	if err != nil {
 		return err
 	}
@@ -151,15 +151,15 @@ func (parser *formParser) httpBodyParse(r *http.Request) (err error) {
 		}
 		r.Body = http.MaxBytesReader(nil, r.Body, parser.cfg.maxBodySize)
 	}
-	parser.data.requestData = &requestData{
+	parser.data.request = &requestData{
 		Values: make(url.Values),
 		Files:  make(files),
-		Array:  make(map[int]map[string]string),
+		Arrays: make([]array, 0),
 	}
 
 	defer func() {
 		if err != nil {
-			parser.data.requestData.Files.RemoveFiles()
+			parser.data.request.Files.RemoveFiles()
 		}
 	}()
 
@@ -243,51 +243,96 @@ func (parser *formParser) parseFormValue(part *multipart.Part) error {
 		}
 	}
 
-	// todo test
-	if result.Len() <= 0 {
-		return errors.New("empty filed")
-	}
+	trimResult := strings.TrimSpace(result.String())
+	trimResult = replaceMultipleSpaces(trimResult)
 
-	// todo add new func there
-	if tagKey != part.FormName() {
-		res := strings.Builder{}
+	// parse form Value if it arrays field
+	// todo
+	//if tagKey != part.FormName() {
+	//	err := parser.parseArrayValue(tagKey, trimResult, part)
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
 
-		depth := 0
-		index := -1
-		for _, v := range part.FormName()[len(tagKey):] {
-			switch v {
-			case '[':
-				depth++
-			case ']':
-				if depth == 0 {
-					return &ErrFieldName{fieldName: part.FormName()}
-				}
-				depth--
-				if index == -1 {
-					newIndex, err := strconv.Atoi(res.String())
-					if err != nil {
-						return &ErrFieldName{fieldName: part.FormName()}
-					}
-					if _, ok := parser.data.requestData.Array[newIndex]; !ok {
-						parser.data.requestData.Array[newIndex] = make(map[string]string)
-					}
+	parser.data.request.Values.Add(part.FormName(), trimResult)
+	return nil
+}
 
-					res.Reset()
-					index = newIndex
-					continue
-				}
-				parser.data.requestData.Array[index][res.String()] = result.String()
-			default:
-				if depth <= 0 {
-					return &ErrFieldName{fieldName: part.FormName()}
-				}
-				res.WriteRune(v)
+func replaceMultipleSpaces(s string) string {
+	var result strings.Builder
+	result.Grow(len(s))
+
+	prevSpace := false
+
+	for _, r := range s {
+		if r == ' ' {
+			if !prevSpace {
+				result.WriteRune(r)
 			}
+			prevSpace = true
+		} else {
+			result.WriteRune(r)
+			prevSpace = false
 		}
-		return nil
 	}
 
-	parser.data.requestData.Values.Add(part.FormName(), result.String())
+	return result.String()
+}
+
+func (parser *formParser) parseArrayValue(tagKey string, formValue string, part *multipart.Part) error {
+	var arr array
+
+	// проверка есть ли данные для массива по ключу
+	for _, v := range parser.data.request.Arrays {
+		if v.fieldName == tagKey {
+			arr = v
+			break
+		}
+	}
+
+	// если массив не создан, создаем
+	if arr.structArray == nil {
+		arr.fieldName = tagKey
+		arr.structArray = make(map[int]map[string]string)
+		parser.data.request.Arrays = append(parser.data.request.Arrays, arr)
+	}
+
+	res := strings.Builder{}
+	depth := 0
+	index := -1
+	// парсинг ключей поля
+	for _, v := range part.FormName()[len(tagKey):] {
+		switch v {
+		case '[':
+			depth++
+		case ']':
+			if depth == 0 {
+				return &ErrFieldName{fieldName: part.FormName()}
+			}
+			if index == -1 {
+				newIndex, err := strconv.Atoi(res.String())
+				if err != nil {
+					return &ErrFieldName{fieldName: part.FormName()}
+				}
+				// проверяем есть ли данные для массива по индексу, если нет то инициализируем новую хэш таблицу
+				if _, ok := arr.structArray[newIndex]; !ok {
+					arr.structArray[newIndex] = make(map[string]string)
+				}
+
+				index = newIndex
+				res.Reset()
+				depth--
+				continue
+			}
+			arr.structArray[index][res.String()] = formValue
+		default:
+			if depth <= 0 {
+				return &ErrFieldName{fieldName: part.FormName()}
+			}
+			res.WriteRune(v)
+		}
+	}
 	return nil
 }
 
@@ -336,7 +381,7 @@ func (parser *formParser) parseFormFile(part *multipart.Part) (err error) {
 		return err
 	}
 
-	parser.data.requestData.Files.Add(strings.ToLower(part.FormName()), tempFile)
+	parser.data.request.Files.Add(strings.ToLower(part.FormName()), tempFile)
 	return nil
 }
 

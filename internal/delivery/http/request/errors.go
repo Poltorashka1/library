@@ -84,13 +84,13 @@ func (e *ErrFieldType) Error() string {
 	return fmt.Sprintf("the field '%s' must be of type %s", e.field, e.typ)
 }
 
-//type ErrFieldRequired struct {
-//	field string
-//}
-//
-//func (e ErrFieldRequired) Error() string {
-//	return fmt.Sprintf("the field '%s' is required; ", e.field)
-//}
+type ErrFieldRequired struct {
+	field string
+}
+
+func (e ErrFieldRequired) Error() string {
+	return fmt.Sprintf("the field '%s' is required; ", e.field)
+}
 
 // MultiError returns all field validation errors for example fieldType/fieldRequired
 type MultiError struct {

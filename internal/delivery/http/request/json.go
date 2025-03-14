@@ -80,7 +80,7 @@ func JsonParseV2(r *http.Request, payload any) error {
 		return err
 	}
 	//var mErr = &MultiError{}
-	//err = d.setDataValue(mErr)
+	//err = d.setValue(mErr)
 	//if err != nil {
 	//	return err
 	//}
@@ -155,7 +155,7 @@ func (parser *jsonParser) readBody(r *http.Request) error {
 		}
 	}
 
-	parser.data.requestData = &requestData{
+	parser.data.request = &requestData{
 		Json: result.String(),
 	}
 	return nil
@@ -180,15 +180,15 @@ func (d *data) decodeJson(mErr *MultiError) error {
 
 	//inObject := false
 
-	for _, v := range d.requestData.Json {
+	for _, v := range d.request.Json {
 		switch string(v) {
 		case `{`:
 			//inObject = true
 			// todo check buf[:-1] == `}`
-			//if d.requestData.Json[len(d.requestData.Json)-1] != '}' {
+			//if d.request.Json[len(d.request.Json)-1] != '}' {
 			//	return errors.New("invalid json syntax")
 			//}
-			//d.requestData.Json = strings.TrimSpace(d.requestData.Json[1 : len(d.requestData.Json)-1])
+			//d.request.Json = strings.TrimSpace(d.request.Json[1 : len(d.request.Json)-1])
 			err := d.getObject(mErr)
 			if err != nil {
 				return err
@@ -225,7 +225,7 @@ func (d *data) getObject(mErr *MultiError) error {
 	expectComma := false
 	var start int
 
-	for i, v := range d.requestData.Json {
+	for i, v := range d.request.Json {
 		z := string(v)
 		_ = z
 		switch string(v) {
@@ -251,8 +251,8 @@ func (d *data) getObject(mErr *MultiError) error {
 		case ",":
 			expectComma = false
 			if depth == 1 && !inString {
-				//d.requestData.Json = d.requestData.Json[i+1:]
-				err := d.setFieldJSON(strings.TrimSpace(d.requestData.Json[start:i+1]), mErr)
+				//d.request.Json = d.request.Json[i+1:]
+				err := d.setFieldJSON(strings.TrimSpace(d.request.Json[start:i+1]), mErr)
 				if err != nil {
 					return err
 				}
@@ -269,8 +269,8 @@ func (d *data) getObject(mErr *MultiError) error {
 			continue
 		}
 	}
-	if start != len(d.requestData.Json) {
-		err := d.setFieldJSON(strings.TrimSpace(d.requestData.Json[start:]), mErr)
+	if start != len(d.request.Json) {
+		err := d.setFieldJSON(strings.TrimSpace(d.request.Json[start:]), mErr)
 		if err != nil {
 			return err
 		}
@@ -302,9 +302,9 @@ func (d *data) setFieldJSON(keyValue string, mErr *MultiError) error {
 	//				val:         field.val,
 	//				typ:         field.typ.Type,
 	//				tagType:     d.tagType,
-	//				requestData: d.requestData.Json,
+	//				request: d.request.Json,
 	//			}
-	//			fmt.Println(newData.requestData.Json)
+	//			fmt.Println(newData.request.Json)
 	//
 	//			err := newData.decodeJson(mErr)
 	//			if err != nil {

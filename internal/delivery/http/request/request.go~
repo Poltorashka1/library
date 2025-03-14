@@ -29,8 +29,8 @@ type data struct {
 	val reflect.Value
 	typ reflect.Type
 
-	tagType     string
-	requestData *requestData
+	tagType string
+	request *requestData
 }
 
 // requestData is a struct for values from request
@@ -38,7 +38,15 @@ type requestData struct {
 	Json   string
 	Values url.Values
 	Files  files
-	Array  map[int]map[string]string
+	Arrays arrays
+}
+
+type arrays []array
+
+type array struct {
+	fieldName    string
+	structArray  map[int]map[string]string
+	defaultArray []string
 }
 
 // files is a map of file names to a slice of os.File
@@ -53,7 +61,7 @@ type field struct {
 	tagType string
 	tags    fieldTags
 
-	requestData *requestData
+	request *requestData
 }
 
 // fieldTags is a struct with tags for field
@@ -182,10 +190,10 @@ func (f *field) setField(payload string) error {
 // Return only Error level error.
 func (d *data) newField(fieldNum int) (*field, error) {
 	field := &field{
-		typ:         d.typ.Field(fieldNum),
-		val:         d.val.Field(fieldNum),
-		tagType:     d.tagType,
-		requestData: d.requestData,
+		typ:     d.typ.Field(fieldNum),
+		val:     d.val.Field(fieldNum),
+		tagType: d.tagType,
+		request: d.request,
 	}
 	err := field.getFieldTags()
 	if err != nil {
@@ -233,19 +241,18 @@ func (f *field) getFieldTags() (err error) {
 	}
 }
 
-// setDataValue writes value to fields of a data structure.
+// setValue writes value to fields of a data structure.
 // Return error - MultiError.
-func (d *data) setDataValue(mErr *MultiError) error {
+func (d *data) setValue(mErr *MultiError) error {
 	if mErr == nil {
-		return errors.New("request: setDataValue: mErr cannot be nil")
+		return errors.New("request: setValue: mErr cannot be nil")
 	}
-	if d.requestData == nil {
-		return errors.New("request: setDataValue: httpData cannot be nil")
+	if d.request == nil {
+		return errors.New("request: setValue: httpData cannot be nil")
 	}
 
 	for fieldNum := range d.typ.NumField() {
 		field, err := d.newField(fieldNum)
-		//fmt.Println(field.typ.Type.Kind() == reflect.Slice)
 		if err != nil {
 			return err
 		}
@@ -262,10 +269,8 @@ func (d *data) setDataValue(mErr *MultiError) error {
 					mErr.Add(err)
 					return err
 				}
-			//case arrayType:
-			//	// что должно быть вместо arrayType?
 			default:
-				err := field.setDefaultValue(mErr)
+				err := field.setValue(mErr)
 				if err != nil {
 					return err
 				}
@@ -277,7 +282,7 @@ func (d *data) setDataValue(mErr *MultiError) error {
 
 // setFileValue writes file os.File to field value.
 func (f *field) setFileValue(mErr *MultiError) error {
-	file := f.requestData.Files[f.tags.Name]
+	file := f.request.Files[f.tags.Name]
 
 	if f.tags.Tag == requiredTag && len(file) < 1 || len(file) > 1 {
 		mErr.Add(fmt.Errorf("the field '%s' must be a single file; ", f.tags.Name))
@@ -297,7 +302,7 @@ func (f *field) setFileValue(mErr *MultiError) error {
 
 // setFilesValue writes files os.File to field value.
 func (f *field) setFilesValue(mErr *MultiError) error {
-	files := f.requestData.Files[f.tags.Name]
+	files := f.request.Files[f.tags.Name]
 	if f.tags.Tag == requiredTag && len(files) < 1 {
 		mErr.Add(fmt.Errorf("the field '%s' must be a single or more files; ", f.tags.Name))
 		return nil
@@ -309,8 +314,8 @@ func (f *field) setFilesValue(mErr *MultiError) error {
 	return nil
 }
 
-// setDefaultValue writes value to field.
-func (f *field) setDefaultValue(mErr *MultiError) error {
+// setValue writes value to field.
+func (f *field) setValue(mErr *MultiError) error {
 	if f.typ.Type.Kind() == reflect.Slice {
 		f.setArrayValue(mErr)
 		return nil
@@ -318,13 +323,13 @@ func (f *field) setDefaultValue(mErr *MultiError) error {
 
 	if f.val.Kind() == reflect.Struct {
 		d := &data{
-			val:         f.val,
-			typ:         f.typ.Type,
-			tagType:     f.tagType,
-			requestData: f.requestData,
+			val:     f.val,
+			typ:     f.typ.Type,
+			tagType: f.tagType,
+			request: f.request,
 		}
 
-		err := d.setDataValue(mErr)
+		err := d.setValue(mErr)
 		if err != nil {
 			return err
 		}
@@ -332,18 +337,18 @@ func (f *field) setDefaultValue(mErr *MultiError) error {
 		return nil
 	}
 
-	ok := f.requestData.Values.Has(f.tags.Name)
+	ok := f.request.Values.Has(f.tags.Name)
 	if !ok && f.tags.Tag == requiredTag {
 		//mErr.Add(ErrFieldRequired{field: f.tags.Name})
 		mErr.Add(fmt.Errorf("the field '%s' is required; ", f.tags.Name))
 		return nil
 	}
 
-	if f.tags.Tag == optionalTag && f.requestData.Values.Get(f.tags.Name) == "" {
+	if f.tags.Tag == optionalTag && f.request.Values.Get(f.tags.Name) == "" {
 		return nil
 	}
 
-	err := f.setField(f.requestData.Values.Get(f.tags.Name))
+	err := f.setField(f.request.Values.Get(f.tags.Name))
 	if err != nil {
 		if f.tags.Tag == optionalTag || f.tags.Tag == requiredTag {
 			mErr.Add(err)
@@ -355,8 +360,6 @@ func (f *field) setDefaultValue(mErr *MultiError) error {
 }
 
 func (f *field) setArrayValue(mErr *MultiError) {
-	fmt.Println(f.requestData.Array)
-
 	if f.typ.Type.Elem().Kind() == reflect.Struct {
 		val := reflect.New(f.typ.Type.Elem())
 		if val.Kind() == reflect.Pointer {
@@ -364,18 +367,19 @@ func (f *field) setArrayValue(mErr *MultiError) {
 		}
 
 		typ := val.Type()
-		for k, v := range f.requestData.Array {
-
+		for k, v := range f.request.Arrays {
+			_ = k
+			_ = v
 		}
 		for idx := range typ.NumField() {
 			field := typ.Field(idx)
-			fmt.Println(field)
+			_ = field
 		}
 	} else {
 
 	}
 
-	requestArray := f.requestData.Values[f.tags.Name]
+	requestArray := f.request.Values[f.tags.Name]
 	fieldSliceTyp := f.typ.Type
 	newSlice := reflect.MakeSlice(fieldSliceTyp, 0, len(requestArray))
 	for _, v := range requestArray {

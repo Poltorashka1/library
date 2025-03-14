@@ -29,7 +29,7 @@ func QueryParse(r *http.Request, payload any) error {
 	parser.queryParse(r)
 
 	var mErr = &MultiError{}
-	err = d.setDataValue(mErr)
+	err = d.setValue(mErr)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func QueryParse(r *http.Request, payload any) error {
 
 // queryParse parsing request query, and write values in requestData.Values
 func (parser *queryParser) queryParse(r *http.Request) {
-	parser.data.requestData = &requestData{
+	parser.data.request = &requestData{
 		Values: r.URL.Query(),
 	}
 }
